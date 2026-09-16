@@ -1,0 +1,199 @@
+@import "tailwindcss";
+
+/* El tema se decide con data-theme en <html>, no con la preferencia del sistema. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ---------------------------------------------------------------------------
+   Paleta de marca. Son los tonos de BytePath: no cambian con el tema.
+   --------------------------------------------------------------------------- */
+@theme {
+  --color-night-950: #070b16;
+  --color-night-900: #0b1020;
+  --color-night-800: #141a2e;
+  --color-night-700: #1f2742;
+  --color-paper: #f7f8fb;
+  --color-ink: #0f172a;
+
+  --color-brand-300: #b9b1fb;
+  --color-brand-400: #8d81f8;
+  --color-brand-500: #6d5ef6;
+  --color-brand-600: #5a4ae6;
+
+  --color-learn: #38bdf8;
+  --color-practice: #22c55e;
+  --color-compete: #f59e0b;
+  --color-hard: #ef4444;
+
+  --animate-caret: caret 1s step-end infinite;
+
+  @keyframes caret {
+    50% {
+      opacity: 0;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Tokens semánticos: lo único que cambia entre temas.
+   Se definen por selector (no dentro de @theme) para que un subárbol pueda
+   fijar su propio tema, como hace la Home con data-theme="light".
+   --------------------------------------------------------------------------- */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bp-canvas: #f7f8fb;
+  --bp-surface: #ffffff;
+  --bp-surface-2: #f1f4f9;
+  --bp-line: #e2e8f0;
+  --bp-line-soft: #eef2f7;
+
+  --bp-fg: #0f172a;
+  --bp-fg-body: #334155;
+  --bp-fg-muted: #51607a;
+  --bp-fg-subtle: #8c98ac;
+
+  /* El código se ve igual en ambos temas: siempre sobre fondo oscuro. */
+  --bp-code: #0b1020;
+  --bp-code-line: #232c49;
+
+  --bp-brand-ink: #5a4ae6;
+  --bp-brand-soft: rgb(109 94 246 / 0.09);
+  --bp-learn-ink: #0369a1;
+  --bp-learn-soft: rgb(56 189 248 / 0.12);
+  --bp-practice-ink: #15803d;
+  --bp-practice-soft: rgb(34 197 94 / 0.1);
+  --bp-compete-ink: #b45309;
+  --bp-compete-soft: rgb(245 158 11 / 0.13);
+  --bp-danger-ink: #dc2626;
+  --bp-danger-soft: rgb(239 68 68 / 0.08);
+
+  --bp-shadow-card: 0 24px 48px -24px rgb(15 23 42 / 0.3);
+  --bp-shadow-soft: 0 12px 32px -24px rgb(15 23 42 / 0.4);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bp-canvas: #080d18;
+  --bp-surface: #111a2e;
+  --bp-surface-2: #18213a;
+  --bp-line: #26304d;
+  --bp-line-soft: #1b2440;
+
+  /* Para leer teoría un rato largo: nada de blanco puro sobre fondo oscuro. */
+  --bp-fg: #e6ebf5;
+  --bp-fg-body: #c5cfe0;
+  --bp-fg-muted: #a3aec4;
+  --bp-fg-subtle: #7a869e;
+
+  --bp-code: #070c18;
+  --bp-code-line: #1c2540;
+
+  --bp-brand-ink: #b9b1fb;
+  --bp-brand-soft: rgb(141 129 248 / 0.16);
+  --bp-learn-ink: #7dd3fc;
+  --bp-learn-soft: rgb(56 189 248 / 0.16);
+  --bp-practice-ink: #86efac;
+  --bp-practice-soft: rgb(34 197 94 / 0.16);
+  --bp-compete-ink: #fbbf24;
+  --bp-compete-soft: rgb(245 158 11 / 0.16);
+  --bp-danger-ink: #fca5a5;
+  --bp-danger-soft: rgb(239 68 68 / 0.16);
+
+  --bp-shadow-card: 0 24px 48px -24px rgb(0 0 0 / 0.75);
+  --bp-shadow-soft: 0 12px 32px -20px rgb(0 0 0 / 0.8);
+}
+
+@theme inline {
+  --color-canvas: var(--bp-canvas);
+  --color-surface: var(--bp-surface);
+  --color-surface-2: var(--bp-surface-2);
+  --color-line: var(--bp-line);
+  --color-line-soft: var(--bp-line-soft);
+
+  --color-fg: var(--bp-fg);
+  --color-fg-body: var(--bp-fg-body);
+  --color-fg-muted: var(--bp-fg-muted);
+  --color-fg-subtle: var(--bp-fg-subtle);
+
+  --color-code: var(--bp-code);
+  --color-code-line: var(--bp-code-line);
+
+  --color-brand-ink: var(--bp-brand-ink);
+  --color-brand-soft: var(--bp-brand-soft);
+  --color-learn-ink: var(--bp-learn-ink);
+  --color-learn-soft: var(--bp-learn-soft);
+  --color-practice-ink: var(--bp-practice-ink);
+  --color-practice-soft: var(--bp-practice-soft);
+  --color-compete-ink: var(--bp-compete-ink);
+  --color-compete-soft: var(--bp-compete-soft);
+  --color-danger-ink: var(--bp-danger-ink);
+  --color-danger-soft: var(--bp-danger-soft);
+
+  --shadow-card: var(--bp-shadow-card);
+  --shadow-soft: var(--bp-shadow-soft);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+@utility bg-dot-grid {
+  background-image: radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-fg);
+  }
+
+  section[id] {
+    scroll-margin-top: 4rem;
+  }
+
+  /* Las ligaduras convierten "<=" o "--" en símbolos: en código C++ confunden. */
+  pre,
+  code {
+    font-variant-ligatures: none;
+  }
+
+  ::selection {
+    background-color: rgb(109 94 246 / 0.28);
+  }
+}
+
+/* El cambio de tema se acompaña de una transición breve, que solo existe
+   durante el propio cambio: nunca al cargar la página ni al pasar el ratón. */
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    fill 180ms ease,
+    box-shadow 180ms ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-transition,
+  .theme-transition *,
+  .theme-transition *::before,
+  .theme-transition *::after {
+    transition: none !important;
+  }
+}
