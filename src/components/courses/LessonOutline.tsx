@@ -4,7 +4,8 @@ import { ChevronDown, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { LessonStatusIcon } from "@/components/courses/LessonStatusIcon";
-import { lessonPath, type OutlineModule } from "@/lib/courses/api";
+import type { OutlineModule } from "@/lib/courses/api";
+import { lessonPath } from "@/lib/courses/labels";
 
 function OutlineList({
   modules,
@@ -30,13 +31,30 @@ function OutlineList({
             {module.lessons.map((lesson) => {
               const active = lesson.slug === currentLessonSlug;
 
+              // Una lección bloqueada por progreso no es un destino: se ve
+              // en el índice, para que se entienda el orden, pero no se pisa.
+              if (lesson.status === "locked") {
+                return (
+                  <li key={lesson.slug}>
+                    <span
+                      aria-disabled="true"
+                      className="flex cursor-not-allowed items-center gap-2.5 rounded-control px-2.5 py-2 text-dense text-fg-subtle"
+                    >
+                      <LessonStatusIcon status="locked" className="size-4" />
+                      <span className="flex-1">{lesson.title}</span>
+                      <span className="sr-only">Bloqueada</span>
+                    </span>
+                  </li>
+                );
+              }
+
               return (
                 <li key={lesson.slug}>
                   <Link
                     href={lessonPath(courseSlug, lesson.slug)}
                     onClick={onNavigate}
                     aria-current={active ? "page" : undefined}
-                    className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-colors ${
+                    className={`focus-ring flex items-center gap-2.5 rounded-control px-2.5 py-2 text-dense transition-colors ${
                       active
                         ? "bg-learn-soft font-medium text-learn-ink"
                         : "text-fg-muted hover:bg-surface-2"
@@ -76,7 +94,7 @@ export function LessonOutline({
           type="button"
           onClick={() => setOpen((value) => !value)}
           aria-expanded={open}
-          className="flex w-full items-center gap-2.5 px-5 py-3 text-sm font-medium"
+          className="focus-ring-tight flex w-full items-center gap-2.5 px-5 py-3 text-sm font-medium"
         >
           <ListChecks aria-hidden className="size-4 text-learn-ink" />
           Contenido del curso

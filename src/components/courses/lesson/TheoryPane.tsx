@@ -5,7 +5,7 @@ import { lessonKindLabels, type LessonContext } from "@/lib/courses/api";
 import type { Lesson, Module } from "@/lib/courses/types";
 
 /**
- * Panel izquierdo: se renderiza en el servidor y se le pasa ya montado al
+ * Teoría de la lección: se renderiza en el servidor y se le pasa ya montada al
  * espacio de trabajo, así que su contenido no viaja como JavaScript al cliente.
  */
 export function TheoryPane({
@@ -15,8 +15,8 @@ export function TheoryPane({
   position,
   total,
   courseSlug,
+  coursePath,
   previous,
-  next,
 }: {
   lesson: Lesson;
   module: Module;
@@ -24,8 +24,8 @@ export function TheoryPane({
   position: number;
   total: number;
   courseSlug: string;
+  coursePath: string;
   previous?: LessonContext;
-  next?: LessonContext;
 }) {
   return (
     <article className="mx-auto max-w-2xl px-5 py-8 sm:px-8 sm:py-12">
@@ -55,8 +55,7 @@ export function TheoryPane({
         <LessonBlocks blocks={lesson.blocks} />
       </div>
 
-      {/* Moverse por el curso sin tener que completar el quiz antes. */}
-      <LessonNav courseSlug={courseSlug} previous={previous} next={next} />
+      <LessonNav courseSlug={courseSlug} coursePath={coursePath} previous={previous} />
     </article>
   );
 }

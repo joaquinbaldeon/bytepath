@@ -1,3 +1,6 @@
+// Catálogo completo, con las respuestas de los quizzes: nunca debe llegar al navegador.
+import "server-only";
+
 import type { Course } from "@/lib/courses/types";
 import { cppFundamentos } from "@/content/courses/cpp-fundamentos";
 import { introProgramacionCompetitiva } from "@/content/courses/introduccion-programacion-competitiva";

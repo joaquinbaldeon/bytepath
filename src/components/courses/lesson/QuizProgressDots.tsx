@@ -36,7 +36,7 @@ export function QuizProgressDots({
               onClick={() => onSelect(i)}
               aria-label={`Pregunta ${i + 1}: ${labels[state]}`}
               aria-current={state === "current" ? "step" : undefined}
-              className={`block size-2.5 rounded-full transition-all hover:scale-125 ${styles[state]}`}
+              className={`focus-ring block size-2.5 rounded-full transition-all hover:scale-125 ${styles[state]}`}
             />
           </li>
         );

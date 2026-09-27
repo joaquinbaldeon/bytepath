@@ -71,7 +71,7 @@ export function TraceBlock({ block }: { block: CodeTrace }) {
             type="button"
             onClick={() => setStep((s) => Math.max(0, s - 1))}
             disabled={step === 0}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-40"
+            className="focus-ring inline-flex h-9 items-center gap-1.5 rounded-control border border-line px-3 text-sm font-medium transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <ChevronLeft aria-hidden className="size-4" />
             Anterior
@@ -80,7 +80,7 @@ export function TraceBlock({ block }: { block: CodeTrace }) {
             <button
               type="button"
               onClick={() => setStep(0)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line px-3 text-sm font-medium transition-colors hover:bg-surface-2"
+              className="focus-ring inline-flex h-9 items-center gap-1.5 rounded-control border border-line px-3 text-sm font-medium transition-colors hover:bg-surface-2"
             >
               <RotateCcw aria-hidden className="size-4" />
               Reiniciar
@@ -89,7 +89,7 @@ export function TraceBlock({ block }: { block: CodeTrace }) {
             <button
               type="button"
               onClick={() => setStep((s) => Math.min(block.steps.length - 1, s + 1))}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-fg px-3 text-sm font-medium text-canvas transition-colors hover:bg-fg/90"
+              className="focus-ring inline-flex h-9 items-center gap-1.5 rounded-control bg-fg px-3 text-sm font-medium text-canvas transition-colors hover:bg-fg/90"
             >
               Siguiente
               <ChevronRight aria-hidden className="size-4" />

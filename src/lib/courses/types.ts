@@ -110,6 +110,31 @@ export type LessonQuiz = {
   questions: SixQuestions;
 };
 
+/**
+ * Pregunta tal como llega al navegador: SIN la respuesta correcta ni la
+ * explicación. Corregir es cosa del servidor (`checkQuizAnswerAction`); si la
+ * respuesta viajara en las props, "el quiz lo corrige el servidor" sería solo
+ * una frase, porque cualquiera la leería en las herramientas del navegador y
+ * el quiz —que es el requisito para completar la lección— se saltaría.
+ */
+export type PublicQuizQuestion = Omit<QuizQuestion, "correctOptionId" | "explanation">;
+
+export type PublicQuiz = {
+  questions: PublicQuizQuestion[];
+};
+
+export function toPublicQuiz(quiz: LessonQuiz): PublicQuiz {
+  return {
+    questions: quiz.questions.map((question) => ({
+      id: question.id,
+      kind: question.kind,
+      prompt: question.prompt,
+      ...(question.code === undefined ? {} : { code: question.code }),
+      options: question.options.map((option) => ({ id: option.id, text: option.text })),
+    })),
+  };
+}
+
 /* -------------------------------- Desafío ---------------------------------- */
 
 export type ChallengeExample = {

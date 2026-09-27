@@ -1,7 +1,6 @@
-import { BookOpen, Clock, Route } from "lucide-react";
+import { ArrowRight, BookOpen, Clock, Route } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import {
   coursePath,
@@ -10,7 +9,11 @@ import {
   getCourseStats,
   lessonPath,
 } from "@/lib/courses/api";
-import { getCourseProgress, getResumeLesson } from "@/lib/courses/progress";
+import {
+  type CourseProgressMap,
+  getCourseProgress,
+  getResumeLesson,
+} from "@/lib/courses/progress";
 import type { Course, Difficulty } from "@/lib/courses/types";
 
 const difficultyTone: Record<Difficulty, "easy" | "medium" | "hard"> = {
@@ -19,31 +22,38 @@ const difficultyTone: Record<Difficulty, "easy" | "medium" | "hard"> = {
   advanced: "hard",
 };
 
-export function CourseCard({ course }: { course: Course }) {
+export function CourseCard({
+  course,
+  progress: courseProgress,
+}: {
+  course: Course;
+  /** Progreso persistido del estudiante en este curso (vacío si no lo hay). */
+  progress: CourseProgressMap;
+}) {
   const stats = getCourseStats(course);
-  const progress = getCourseProgress(course);
-  const resume = getResumeLesson(course);
+  const progress = getCourseProgress(course, courseProgress);
+  const resume = getResumeLesson(course, courseProgress);
 
   return (
-    <article className="group relative flex flex-col rounded-2xl border border-line bg-surface p-6 transition duration-300 hover:-translate-y-1 hover:border-learn/50 hover:shadow-card">
+    // El foco vive en la tarjeta, no en el texto del enlace: como el enlace
+    // cubre toda la tarjeta con un pseudoelemento, subrayar solo el título
+    // dejaría el anillo en un sitio que no corresponde con el área pulsable.
+    <article className="group relative flex flex-col rounded-panel border border-line bg-surface p-5 transition duration-300 hover:-translate-y-1 hover:border-learn/50 hover:shadow-card has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-brand-400">
       <div className="flex items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-0.5 font-mono text-[11px] text-fg-muted">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-0.5 font-mono text-label text-fg-muted">
           {course.language}
         </span>
-        <Badge tone={difficultyTone[course.difficulty]}>
-          {difficultyLabels[course.difficulty]}
-        </Badge>
+        <Badge tone={difficultyTone[course.difficulty]}>{difficultyLabels[course.difficulty]}</Badge>
       </div>
 
-      <h3 className="mt-4 font-display text-xl font-semibold">
-        {/* El enlace cubre toda la tarjeta; el botón queda por encima. */}
-        <Link href={coursePath(course.slug)} className="after:absolute after:inset-0">
+      <h3 className="mt-3 font-display text-lg font-semibold">
+        <Link href={coursePath(course.slug)} className="rounded-control after:absolute after:inset-0">
           {course.title}
         </Link>
       </h3>
-      <p className="mt-2 flex-1 leading-relaxed text-fg-muted">{course.summary}</p>
+      <p className="mt-1.5 flex-1 text-body leading-relaxed text-fg-muted">{course.summary}</p>
 
-      <dl className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-fg-muted">
+      <dl className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-dense text-fg-muted">
         <div className="inline-flex items-center gap-1.5">
           <Route aria-hidden className="size-4 text-fg-subtle" />
           <dt className="sr-only">Módulos</dt>
@@ -62,30 +72,33 @@ export function CourseCard({ course }: { course: Course }) {
       </dl>
 
       {progress.started && (
-        <div className="mt-5">
-          <div className="flex items-center justify-between text-xs">
+        <div className="mt-4">
+          <div className="flex items-center justify-between text-label">
             <span className="text-fg-muted">
               {progress.completed} de {progress.total} lecciones
             </span>
-            <span className="font-mono font-medium text-learn-ink">{progress.percent}%</span>
+            <span className="font-mono font-medium text-learn-ink tabular-nums">
+              {progress.percent}%
+            </span>
           </div>
           <ProgressBar
             value={progress.percent}
-            className="mt-2"
+            className="mt-1.5"
             label={`Progreso de ${course.title}`}
           />
         </div>
       )}
 
       {resume && (
-        <Button
-          href={lessonPath(course.slug, resume.slug)}
-          variant="outlineLight"
-          arrow
-          className="relative mt-6 self-start"
-        >
-          {progress.started ? "Continuar" : "Empezar"}
-        </Button>
+        <div className="relative mt-5 self-start">
+          <Link href={lessonPath(course.slug, resume.slug)} className="group focus-ring inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 text-sm font-medium text-fg transition-colors hover:bg-surface-2">
+            {progress.started ? "Continuar" : "Empezar"}
+            <ArrowRight
+              aria-hidden
+              className="size-4 transition-transform group-hover:translate-x-0.5"
+            />
+          </Link>
+        </div>
       )}
     </article>
   );

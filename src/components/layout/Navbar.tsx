@@ -9,9 +9,9 @@ import {
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { UserMenu } from "@/components/layout/UserMenu";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { Logo } from "@/components/ui/Logo";
 import { navLinks, routes } from "@/lib/site";
@@ -58,13 +58,7 @@ export function Navbar() {
 
         <div className="hidden items-center gap-2 md:flex">
           <ThemeToggle className="text-slate-300 hover:bg-white/5 hover:text-white" />
-          <Link
-            href={routes.login}
-            className="rounded-md px-3 py-2 text-sm text-slate-300 transition-colors hover:text-white"
-          >
-            Iniciar sesión
-          </Link>
-          <Button href={routes.signup}>Comenzar</Button>
+          <UserMenu />
         </div>
 
         <div className="flex items-center gap-1 md:hidden">
@@ -104,13 +98,8 @@ export function Navbar() {
                   {"soon" in link && <Badge tone="soonDark">Pronto</Badge>}
                 </Link>
               ))}
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <Button href={routes.login} variant="outlineDark" onClick={close}>
-                  Iniciar sesión
-                </Button>
-                <Button href={routes.signup} onClick={close}>
-                  Comenzar
-                </Button>
+              <div className="mt-3">
+                <UserMenu onNavigate={close} />
               </div>
             </Container>
           </motion.div>

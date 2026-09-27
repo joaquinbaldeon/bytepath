@@ -1,5 +1,7 @@
 import { X } from "lucide-react";
 import Link from "next/link";
+import { EnergyMeter } from "@/components/energy/EnergyMeter";
+import { TokenBadge } from "@/components/tokens/TokenBadge";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { LogoMark } from "@/components/ui/Logo";
@@ -31,9 +33,15 @@ export function LessonHeader({
           {courseTitle}
         </Link>
 
-        <div className="ml-auto flex items-center gap-4">
+        <div className="ml-auto flex items-center gap-3 sm:gap-4">
+          {/* La energía se gasta en esta pantalla, así que se ve en esta
+              pantalla. En móvil el medidor se reduce a una cifra, que es lo
+              que deja sitio para que siga cabiendo el progreso. */}
+          <EnergyMeter />
+          <TokenBadge className="hidden sm:flex" />
+
           <div className="flex items-center gap-3">
-            <span className="font-mono text-xs text-slate-400">
+            <span className="hidden font-mono text-xs text-slate-400 sm:inline">
               {position}/{total}
             </span>
             <ProgressBar

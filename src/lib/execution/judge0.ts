@@ -18,6 +18,11 @@ const JUDGE0_LANGUAGE_ID = process.env.JUDGE0_LANGUAGE_ID;
 /** Techo de espera total: por encima de esto se devuelve `unavailable`. */
 const POLL_BUDGET_MS = 25_000;
 const POLL_INTERVAL_MS = 700;
+/**
+ * `fetch` no trae tiempo máximo propio: sin esto, un servidor que acepta la
+ * conexión y nunca responde dejaría la ejecución colgada indefinidamente.
+ */
+const REQUEST_TIMEOUT_MS = 10_000;
 
 export type Judge0Run = {
   statusId: number;
@@ -46,21 +51,43 @@ function authHeaders(): Record<string, string> {
 async function judge0Fetch(path: string, init?: RequestInit): Promise<Response> {
   if (!JUDGE0_URL) throw new Judge0Error("Judge0 no está configurado");
 
-  const response = await fetch(`${JUDGE0_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
-      ...init?.headers,
-    },
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${JUDGE0_URL}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(),
+        ...init?.headers,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    // Red caída, DNS, TLS o tiempo agotado: para el estudiante es lo mismo,
+    // el servicio no está disponible. Nunca es culpa de su código.
+    throw new Judge0Error("No se ha podido contactar con Judge0", { cause: (error as Error).cause ?? error });
+  }
 
   if (!response.ok) {
-    const detail = (await response.text()).slice(0, 300);
-    throw new Judge0Error(`Judge0 respondió ${response.status}: ${detail}`);
+    // Solo el código HTTP. El cuerpo de la respuesta no se copia al mensaje
+    // (que acaba en los logs): no se sabe qué puede incluir un proveedor.
+    throw new Judge0Error(`Judge0 respondió ${response.status}`);
   }
   return response;
+}
+
+/**
+ * Lee el JSON de una respuesta de Judge0. Si no es JSON válido, lanza un
+ * Judge0Error SIN el cuerpo: el mensaje de un SyntaxError incluye el principio
+ * del texto recibido, y ese mensaje acabaría en los logs.
+ */
+async function readJson(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    throw new Judge0Error(`Judge0 devolvió una respuesta no válida (HTTP ${response.status})`);
+  }
 }
 
 const encode = (value: string) => Buffer.from(value, "utf8").toString("base64");
@@ -120,14 +147,17 @@ export async function runOnJudge0({
     // su propia normalización, para que haya una sola fuente de verdad.
   }));
 
-  const created = (await (
+  const created = await readJson(
     await judge0Fetch("/submissions/batch?base64_encoded=true", {
       method: "POST",
       body: JSON.stringify({ submissions }),
-    })
-  ).json()) as { token?: string; error?: string }[];
+    }),
+  );
+  if (!Array.isArray(created)) throw new Judge0Error("Judge0 devolvió una respuesta inesperada al crear el envío");
 
-  const tokens = created.map((item) => item.token).filter(Boolean) as string[];
+  const tokens = (created as { token?: unknown }[])
+    .map((item) => item?.token)
+    .filter((token): token is string => typeof token === "string");
   if (tokens.length !== tests.length) {
     throw new Judge0Error("Judge0 no aceptó todos los casos del envío");
   }
@@ -136,7 +166,7 @@ export async function runOnJudge0({
   const query = `tokens=${tokens.join(",")}&base64_encoded=true&fields=status_id,stdout,stderr,compile_output,message,time,memory`;
 
   while (Date.now() < deadline) {
-    const batch = (await (await judge0Fetch(`/submissions/batch?${query}`)).json()) as {
+    const batch = (await readJson(await judge0Fetch(`/submissions/batch?${query}`))) as {
       submissions: {
         status_id: number;
         stdout: string | null;
@@ -147,6 +177,10 @@ export async function runOnJudge0({
         memory: number | null;
       }[];
     };
+
+    if (!batch || !Array.isArray(batch.submissions) || batch.submissions.length !== tokens.length) {
+      throw new Judge0Error("Judge0 devolvió una respuesta inesperada al consultar el envío");
+    }
 
     // 1 = en cola, 2 = procesando. Cualquier otro valor es un estado final.
     const done = batch.submissions.every((item) => item.status_id > 2);

@@ -40,7 +40,7 @@ export function ChallengeEditor({
         <button
           type="button"
           onClick={onReset}
-          className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+          className="focus-ring inline-flex items-center gap-1.5 rounded-control px-2 py-1 text-xs text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
         >
           <RotateCcw aria-hidden className="size-3.5" />
           Reiniciar
@@ -64,7 +64,7 @@ export function ChallengeEditor({
             type="button"
             onClick={onRun}
             disabled={running}
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-500 px-5 font-medium text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-subtle"
+            className="focus-ring inline-flex h-10 items-center gap-2 rounded-control bg-brand-500 px-5 font-medium text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-subtle"
           >
             <Play aria-hidden className="size-4 fill-current" />
             {running ? "Ejecutando…" : "Ejecutar"}

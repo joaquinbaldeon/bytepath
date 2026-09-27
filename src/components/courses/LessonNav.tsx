@@ -1,16 +1,24 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, Map as MapIcon } from "lucide-react";
 import Link from "next/link";
 import type { LessonContext } from "@/lib/courses/api";
 import { lessonPath } from "@/lib/courses/api";
 
+/**
+ * Salidas al final de la teoría: la lección anterior y el camino.
+ *
+ * Ya no hay "Siguiente lección" aquí. Con el camino, la siguiente lección se
+ * desbloquea al completar esta, y entrar a ella es una acción con
+ * consecuencias (cuesta energía): no puede ser un enlace suelto al final de un
+ * texto. La forma de avanzar es terminar la lección con el botón "Continuar".
+ */
 export function LessonNav({
   courseSlug,
+  coursePath,
   previous,
-  next,
 }: {
   courseSlug: string;
+  coursePath: string;
   previous?: LessonContext;
-  next?: LessonContext;
 }) {
   return (
     <nav
@@ -20,7 +28,7 @@ export function LessonNav({
       {previous ? (
         <Link
           href={lessonPath(courseSlug, previous.lesson.slug)}
-          className="group flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3.5 transition-colors hover:bg-surface-2"
+          className="focus-ring group flex items-center gap-3 rounded-card border border-line bg-surface px-4 py-3.5 transition-colors hover:bg-surface-2"
         >
           <ChevronLeft
             aria-hidden
@@ -35,21 +43,16 @@ export function LessonNav({
         <span />
       )}
 
-      {next && (
-        <Link
-          href={lessonPath(courseSlug, next.lesson.slug)}
-          className="group flex items-center gap-3 rounded-xl bg-brand-500 px-4 py-3.5 text-white transition-colors hover:bg-brand-600 sm:justify-end sm:text-right"
-        >
-          <span className="min-w-0">
-            <span className="block text-xs text-white/70">Siguiente lección</span>
-            <span className="block truncate text-sm font-medium">{next.lesson.title}</span>
-          </span>
-          <ChevronRight
-            aria-hidden
-            className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5"
-          />
-        </Link>
-      )}
+      <Link
+        href={coursePath}
+        className="focus-ring group flex items-center gap-3 rounded-card border border-line bg-surface px-4 py-3.5 transition-colors hover:bg-surface-2 sm:justify-end sm:text-right"
+      >
+        <span className="min-w-0">
+          <span className="block text-xs text-fg-muted">Salir al</span>
+          <span className="block truncate text-sm font-medium">Camino del curso</span>
+        </span>
+        <MapIcon aria-hidden className="size-4 shrink-0 text-fg-subtle" />
+      </Link>
     </nav>
   );
 }

@@ -1,19 +1,33 @@
+﻿import "server-only";
+
 import { courses } from "@/content/courses";
-import { getLessonStatus, type LessonStatus } from "@/lib/courses/progress";
-import type {
-  Course,
-  Difficulty,
-  Lesson,
-  LessonKind,
-  Module,
-  QuestionKind,
-} from "@/lib/courses/types";
+import {
+  type CourseProgressMap,
+  getLessonStatus,
+  type LessonStatus,
+} from "@/lib/courses/progress";
+import type { Course, Lesson, LessonKind, Module } from "@/lib/courses/types";
 
 /**
  * Único punto de acceso al contenido de los cursos. Hoy lee datos estáticos;
  * el día que exista una base de datos solo cambia la implementación de estas
  * funciones (pasando a ser asíncronas), no las páginas ni los componentes.
+ *
+ * SOLO CÓDIGO DE SERVIDOR. Este archivo importa el catálogo completo, y un
+ * componente de cliente que lo importe mete toda la teoría y todos los quizzes
+ * en el JavaScript del navegador. Para rutas, etiquetas y formato desde un
+ * componente de cliente, importa de `labels.ts`.
  */
+
+export {
+  coursePath,
+  coursesPath,
+  difficultyLabels,
+  formatDuration,
+  lessonKindLabels,
+  lessonPath,
+  questionKindLabels,
+} from "@/lib/courses/labels";
 
 export type LessonContext = {
   course: Course;
@@ -39,6 +53,21 @@ export function getCourseLessons(course: Course): LessonContext[] {
 
 export function getLesson(course: Course, lessonSlug: string): LessonContext | undefined {
   return getCourseLessons(course).find((context) => context.lesson.slug === lessonSlug);
+}
+
+/**
+ * Curso y lección a los que pertenece un desafío, según el CONTENIDO. Es lo que
+ * usa el servidor para decidir el acceso: el curso y la lección que diga el
+ * navegador no cuentan.
+ */
+export function findChallenge(challengeId: string): { course: Course; lesson: Lesson } | undefined {
+  for (const course of courses) {
+    for (const courseModule of course.modules) {
+      const lesson = courseModule.lessons.find((candidate) => candidate.challenge?.id === challengeId);
+      if (lesson) return { course, lesson };
+    }
+  }
+  return undefined;
 }
 
 export function getAdjacentLessons(course: Course, lessonSlug: string) {
@@ -75,7 +104,11 @@ export type OutlineModule = {
 };
 
 /** Versión ligera del curso para el índice lateral de la lección. */
-export function buildCourseOutline(course: Course): OutlineModule[] {
+export function buildCourseOutline(
+  course: Course,
+  progress: CourseProgressMap,
+  enforce = true,
+): OutlineModule[] {
   return course.modules.map((module) => ({
     slug: module.slug,
     title: module.title,
@@ -83,48 +116,8 @@ export function buildCourseOutline(course: Course): OutlineModule[] {
       slug: lesson.slug,
       title: lesson.title,
       kind: lesson.kind,
-      status: getLessonStatus(course, lesson.slug),
+      status: getLessonStatus(course, lesson.slug, progress, enforce),
     })),
   }));
 }
 
-/* ---------------------------------- Rutas ----------------------------------- */
-
-export const coursesPath = "/cursos";
-
-export function coursePath(courseSlug: string): string {
-  return `/cursos/${courseSlug}`;
-}
-
-export function lessonPath(courseSlug: string, lessonSlug: string): string {
-  return `/cursos/${courseSlug}/${lessonSlug}`;
-}
-
-/* --------------------------------- Etiquetas --------------------------------- */
-
-export const difficultyLabels: Record<Difficulty, string> = {
-  beginner: "Principiante",
-  intermediate: "Intermedio",
-  advanced: "Avanzado",
-};
-
-export const lessonKindLabels: Record<LessonKind, string> = {
-  theory: "Teoría",
-  exercise: "Ejercicio",
-  quiz: "Repaso",
-};
-
-export const questionKindLabels: Record<QuestionKind, string> = {
-  concept: "Concepto",
-  "what-does-it-do": "¿Qué hace este código?",
-  "predict-output": "Predice la salida",
-  "spot-error": "Encuentra el error",
-  apply: "Aplica lo aprendido",
-};
-
-export function formatDuration(minutes: number): string {
-  if (minutes < 60) return `${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
-}

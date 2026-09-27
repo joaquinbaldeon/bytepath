@@ -1,4 +1,4 @@
-import { Circle, CircleCheck, Play } from "lucide-react";
+import { Circle, CircleCheck, Lock, Play } from "lucide-react";
 import type { LessonStatus } from "@/lib/courses/progress";
 
 export function LessonStatusIcon({
@@ -18,6 +18,9 @@ export function LessonStatusIcon({
       </span>
     );
   }
+  if (status === "locked") {
+    return <Lock aria-hidden className={`shrink-0 text-fg-subtle/60 ${className}`} />;
+  }
   return <Circle aria-hidden className={`shrink-0 text-fg-subtle/50 ${className}`} />;
 }
 
@@ -25,4 +28,5 @@ export const lessonStatusLabels: Record<LessonStatus, string> = {
   completed: "Completada",
   current: "En curso",
   upcoming: "No iniciada",
+  locked: "Bloqueada",
 };

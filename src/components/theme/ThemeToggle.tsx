@@ -33,7 +33,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
     <button
       type="button"
       onClick={toggleTheme}
-      className={`grid size-9 shrink-0 place-items-center rounded-lg transition-colors ${className}`}
+      className={`focus-ring grid size-9 shrink-0 place-items-center rounded-control transition-colors ${className}`}
     >
       <Moon aria-hidden className="size-4.5 dark:hidden" />
       <Sun aria-hidden className="hidden size-4.5 dark:block" />

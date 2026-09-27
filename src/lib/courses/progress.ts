@@ -1,17 +1,43 @@
-import type { Course, Lesson, Module } from "@/lib/courses/types";
+import { isLessonUnlocked, orderedLessons } from "@/lib/courses/access";
+import type { QuizSnapshot } from "@/lib/courses/quizProgress";
+import type { Course, Module } from "@/lib/courses/types";
 
 /**
- * Progreso de ejemplo mientras no hay autenticación ni base de datos.
+ * Progreso de un estudiante en un curso.
  *
- * Cuando exista un usuario real, basta con sustituir `demoProgress` por la
- * consulta correspondiente y mantener la firma de las funciones de este archivo:
- * el resto de la aplicación no necesita cambiar.
+ * Antes vivía en memoria del navegador y se perdía al recargar. Ahora la
+ * fuente de verdad es Supabase (`lesson_activations`, ver `src/lib/courses/
+ * server.ts`), y este archivo se queda con lo que siempre debió ser: funciones
+ * puras que, dado ese progreso, calculan porcentajes, estados y por dónde
+ * seguir. No leen nada por su cuenta; reciben el progreso como argumento, lo
+ * que además las hace triviales de probar y utilizables desde servidor y
+ * cliente.
  */
-const demoProgress: Record<string, string[]> = {
-  "cpp-fundamentos": ["que-es-cpp", "tu-primer-programa"],
+
+export type QuizStatus = "not_started" | "in_progress" | "completed";
+
+/** Lo que se sabe de UNA lección que el estudiante ya ha iniciado. */
+export type LessonProgress = {
+  quizStatus: QuizStatus;
+  /**
+   * Instantánea del quiz en curso, ya validada contra el quiz real y puesta de
+   * acuerdo con `solvedIds`. `null` si no hay nada que continuar.
+   */
+  snapshot: QuizSnapshot | null;
+  /** Preguntas acertadas según el servidor: lo que de verdad cuenta para el requisito. */
+  solvedIds: string[];
+  /** El juez ha dado el desafío por resuelto (lo anota el servidor, no el navegador). */
+  challengePassed: boolean;
+  /** `completed_at` no es nulo: energía cobrada, tokens pagados, siguiente desbloqueada. */
+  completed: boolean;
 };
 
-export type LessonStatus = "completed" | "current" | "upcoming";
+/** Progreso por slug de lección. Una lección sin entrada no se ha iniciado. */
+export type CourseProgressMap = ReadonlyMap<string, LessonProgress>;
+
+export const emptyProgress: CourseProgressMap = new Map();
+
+export type LessonStatus = "completed" | "current" | "upcoming" | "locked";
 
 export type CourseProgress = {
   completed: number;
@@ -21,74 +47,66 @@ export type CourseProgress = {
   finished: boolean;
 };
 
-export function getCompletedLessonSlugs(courseSlug: string): string[] {
-  return demoProgress[courseSlug] ?? [];
+export function completedSlugs(progress: CourseProgressMap): Set<string> {
+  const slugs = new Set<string>();
+  for (const [slug, lesson] of progress) {
+    if (lesson.completed) slugs.add(slug);
+  }
+  return slugs;
 }
 
-function allLessons(course: Course): { module: Module; lesson: Lesson }[] {
-  return course.modules.flatMap((module) =>
-    module.lessons.map((lesson) => ({ module, lesson })),
-  );
-}
-
-export function getCourseProgress(course: Course): CourseProgress {
-  const lessons = allLessons(course);
-  const completedSlugs = new Set(getCompletedLessonSlugs(course.slug));
-  const completed = lessons.filter(({ lesson }) => completedSlugs.has(lesson.slug)).length;
+export function getCourseProgress(course: Course, progress: CourseProgressMap): CourseProgress {
+  const lessons = orderedLessons(course);
+  const done = completedSlugs(progress);
+  const completed = lessons.filter(({ lesson }) => done.has(lesson.slug)).length;
   const total = lessons.length;
 
   return {
     completed,
     total,
     percent: total === 0 ? 0 : Math.round((completed / total) * 100),
-    started: completed > 0,
+    started: completed > 0 || progress.size > 0,
     finished: total > 0 && completed === total,
   };
 }
 
-/**
- * La lección "actual" es la primera sin completar: es el punto por el que se
- * retoma el curso. Ninguna lección se bloquea, de momento se puede visitar todo.
- */
-export function getLessonStatus(course: Course, lessonSlug: string): LessonStatus {
-  const completedSlugs = new Set(getCompletedLessonSlugs(course.slug));
-  if (completedSlugs.has(lessonSlug)) return "completed";
-
-  const firstPending = allLessons(course).find(({ lesson }) => !completedSlugs.has(lesson.slug));
-  return firstPending?.lesson.slug === lessonSlug ? "current" : "upcoming";
+export function getModuleProgress(module: Module, progress: CourseProgressMap) {
+  const done = completedSlugs(progress);
+  const completed = module.lessons.filter((lesson) => done.has(lesson.slug)).length;
+  return { completed, total: module.lessons.length };
 }
 
-/** Lección por la que empezar o continuar el curso. */
-export function getResumeLesson(course: Course): Lesson | undefined {
-  const completedSlugs = new Set(getCompletedLessonSlugs(course.slug));
-  const lessons = allLessons(course);
-  const pending = lessons.find(({ lesson }) => !completedSlugs.has(lesson.slug));
+/**
+ * Lección por la que retomar el curso: la primera sin completar. Con el
+ * desbloqueo lineal, es también la única desbloqueada que falta por hacer.
+ */
+export function getResumeLesson(course: Course, progress: CourseProgressMap) {
+  const done = completedSlugs(progress);
+  const lessons = orderedLessons(course);
+  const pending = lessons.find(({ lesson }) => !done.has(lesson.slug));
   return (pending ?? lessons[0])?.lesson;
 }
 
 /**
- * Costura para la persistencia futura.
+ * Estado de una lección para el índice del curso.
  *
- * Hoy el completado vive solo en memoria: se pierde al recargar la página y no
- * lo ven los componentes de servidor, que siguen leyendo `demoProgress`. Cuando
- * existan cuentas y base de datos, esta función pasará a escribir de verdad y
- * las de lectura de arriba consultarán la misma fuente; ningún componente
- * necesita cambiar.
+ *   completed  hecha
+ *   current    la que toca ahora (primera sin completar)
+ *   locked     falta completar la anterior
+ *   upcoming   sin completar y sin bloqueo (solo ocurre cuando no se
+ *              bloquea por progreso: sin Supabase, `enforce` = false)
  */
-const completedThisSession = new Map<string, Set<string>>();
+export function getLessonStatus(
+  course: Course,
+  lessonSlug: string,
+  progress: CourseProgressMap,
+  enforce = true,
+): LessonStatus {
+  const done = completedSlugs(progress);
+  if (done.has(lessonSlug)) return "completed";
 
-export function markLessonCompleted(courseSlug: string, lessonSlug: string): void {
-  const lessons = completedThisSession.get(courseSlug) ?? new Set<string>();
-  lessons.add(lessonSlug);
-  completedThisSession.set(courseSlug, lessons);
-}
+  const firstPending = orderedLessons(course).find(({ lesson }) => !done.has(lesson.slug));
+  if (firstPending?.lesson.slug === lessonSlug) return "current";
 
-export function isCompletedThisSession(courseSlug: string, lessonSlug: string): boolean {
-  return completedThisSession.get(courseSlug)?.has(lessonSlug) ?? false;
-}
-
-export function getModuleProgress(course: Course, module: Module) {
-  const completedSlugs = new Set(getCompletedLessonSlugs(course.slug));
-  const completed = module.lessons.filter((lesson) => completedSlugs.has(lesson.slug)).length;
-  return { completed, total: module.lessons.length };
+  return isLessonUnlocked(course, lessonSlug, done, enforce) ? "upcoming" : "locked";
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { Logo } from "@/components/ui/Logo";
+import { legalDocuments } from "@/lib/legal/documents";
 import { routes } from "@/lib/site";
 
 const columns = [
@@ -19,13 +20,20 @@ const columns = [
       { label: "Crear cuenta", href: routes.signup },
     ],
   },
+  {
+    title: "Legal",
+    links: [
+      { label: legalDocuments.terms.title, href: routes.terms },
+      { label: legalDocuments.privacy.title, href: routes.privacy },
+    ],
+  },
 ];
 
 export function Footer() {
   return (
     <footer className="bg-night-950 text-slate-400">
-      <Container className="grid gap-10 py-14 md:grid-cols-[1.6fr_1fr_1fr]">
-        <div>
+      <Container className="grid gap-10 py-14 sm:grid-cols-3 md:grid-cols-[1.6fr_1fr_1fr_1fr]">
+        <div className="sm:col-span-3 md:col-span-1">
           <Logo />
           <p className="mt-4 max-w-xs text-sm leading-relaxed">
             Aprende. Practica. Compite. Tu ruta en la programación competitiva con C++.
@@ -39,7 +47,10 @@ export function Footer() {
             <ul className="mt-4 space-y-3 text-sm">
               {column.links.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="transition-colors hover:text-white">
+                  <Link
+                    href={link.href}
+                    className="rounded-control transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+                  >
                     {link.label}
                   </Link>
                 </li>

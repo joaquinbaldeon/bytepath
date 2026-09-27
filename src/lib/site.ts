@@ -7,6 +7,14 @@ export const routes = {
   competition: "/competicion",
   login: "/login",
   signup: "/registro",
+  premium: "/premium",
+  account: "/cuenta",
+  terms: "/terminos",
+  privacy: "/privacidad",
+  passwordReset: "/recuperar",
+  passwordUpdate: "/cuenta/contrasena",
+  authConfirm: "/auth/confirmar",
+  dataExport: "/api/cuenta/exportar",
 } as const;
 
 export const navLinks = [

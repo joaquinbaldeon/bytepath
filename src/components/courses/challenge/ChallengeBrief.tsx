@@ -22,7 +22,7 @@ export function ChallengeBrief({
       <button
         type="button"
         onClick={onBackToTheory}
-        className="inline-flex items-center gap-1.5 text-sm text-fg-muted transition-colors hover:text-fg"
+        className="focus-ring inline-flex items-center gap-1.5 rounded-control text-sm text-fg-muted transition-colors hover:text-fg"
       >
         <ArrowLeft aria-hidden className="size-4" />
         Volver a la teoría
@@ -115,7 +115,7 @@ export function ChallengeBrief({
             <button
               type="button"
               onClick={onRevealHint}
-              className="mt-3 inline-flex h-9 items-center gap-2 rounded-lg border border-line px-3 text-sm font-medium transition-colors hover:bg-surface-2"
+              className="focus-ring mt-3 inline-flex h-9 items-center gap-2 rounded-control border border-line px-3 text-sm font-medium transition-colors hover:bg-surface-2"
             >
               <Lightbulb aria-hidden className="size-4 text-brand-ink" />
               {revealedHints === 0

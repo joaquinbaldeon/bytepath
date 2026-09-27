@@ -2,17 +2,20 @@
 
 import { Check, X } from "lucide-react";
 import { CodeBlock } from "@/components/courses/CodeBlock";
-import { questionKindLabels } from "@/lib/courses/api";
-import type { QuizQuestion } from "@/lib/courses/types";
+import { questionKindLabels } from "@/lib/courses/labels";
+import type { PublicQuizQuestion } from "@/lib/courses/types";
 import type { AnswerState } from "@/lib/courses/useLessonQuiz";
 
 export function QuizQuestionCard({
   question,
   answer,
+  options,
   onSelect,
 }: {
-  question: QuizQuestion;
+  question: PublicQuizQuestion;
   answer: AnswerState;
+  /** Opciones de `question`, ya en el orden barajado para este intento. */
+  options: PublicQuizQuestion["options"];
   onSelect: (optionId: string) => void;
 }) {
   const showFeedback = answer.checked;
@@ -27,9 +30,11 @@ export function QuizQuestionCard({
       {question.code && <CodeBlock code={question.code} className="mt-4" />}
 
       <ul className="mt-5 space-y-2.5">
-        {question.options.map((option) => {
+        {options.map((option) => {
           const selected = answer.selected === option.id;
-          const isAnswer = option.id === question.correctOptionId;
+          // El servidor solo confirma la respuesta correcta al acertarla: si la
+          // opción marcada está corregida como acierto, es la respuesta.
+          const isAnswer = selected && answer.solved;
 
           let state = "border-line bg-surface hover:bg-surface-2";
           if (showFeedback && selected && isAnswer) {
@@ -45,9 +50,9 @@ export function QuizQuestionCard({
               <button
                 type="button"
                 onClick={() => onSelect(option.id)}
-                disabled={answer.solved}
+                disabled={answer.checked}
                 aria-pressed={selected}
-                className={`flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-left text-[15px] leading-6 transition-colors disabled:cursor-default ${state}`}
+                className={`focus-ring flex w-full items-start gap-3 rounded-card border px-4 py-3 text-left text-body transition-colors disabled:cursor-default ${state}`}
               >
                 <span
                   className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border ${
@@ -89,8 +94,8 @@ export function QuizQuestionCard({
           </p>
           <p className="mt-1 text-sm leading-6 text-fg-muted">
             {answer.solved
-              ? question.explanation
-              : "Vuelve a la teoría de la izquierda si lo necesitas y prueba con otra opción."}
+              ? answer.explanation
+              : "Volverá al final del quiz para que la intentes de nuevo."}
           </p>
         </div>
       )}

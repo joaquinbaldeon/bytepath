@@ -36,6 +36,14 @@ export type SubmissionRequest = {
   challengeId: string;
   language: "cpp";
   source: string;
+  /**
+   * De qué lección es el desafío. Solo sirve para que, si el veredicto es
+   * "passed", el servidor deje constancia en el progreso de ESA lección: se
+   * comprueba contra el contenido (que el desafío pertenezca a esa lección) y
+   * no concede nada por sí mismo.
+   */
+  courseSlug?: string;
+  lessonSlug?: string;
 };
 
 export type SubmissionResult = {
@@ -45,6 +53,14 @@ export type SubmissionResult = {
   /** Explicación para el estudiante cuando no hay veredicto. */
   message?: string;
   tests: TestOutcome[];
+  /**
+   * Solo con veredicto "passed" y una sesión iniciada: si el servidor ha dejado
+   * constancia de que el desafío está resuelto. `false` significa que la
+   * solución es correcta pero NO se ha podido guardar (falta configuración del
+   * servidor o los SQL sin aplicar): la lección no se podrá completar hasta que
+   * se arregle, y la interfaz debe decirlo.
+   */
+  recorded?: boolean;
 };
 
 /**

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { markLessonCompleted } from "@/lib/courses/progress";
 import type { PracticalChallenge } from "@/lib/courses/types";
 import { getExecutionProvider } from "@/lib/execution";
 import type { RunStatus, SubmissionResult, TestOutcome } from "@/lib/execution/types";
@@ -14,11 +13,28 @@ export type ChallengeStatus = "idle" | "running" | RunStatus;
  *
  * El veredicto **lo decide el servidor**. Este hook no compara salidas ni
  * deduce si la solución es correcta: manda el código y muestra la respuesta.
- * La lección se completa al resolver el desafío, nunca al terminar el quiz.
+ *
+ * Resolver el desafío NO completa la lección por sí solo. Cuando el juez da el
+ * veredicto "passed", el servidor deja constancia (`record_challenge_pass`, en
+ * `/api/runs`) y avisa con `recorded`; a partir de ahí completar la lección
+ * es otra petición, atómica, que vuelve a comprobarlo todo y es la que gasta la
+ * energía. Aquí solo se avisa de que el desafío está resuelto (`onPassed`).
  */
 export function useLessonChallenge(
   challenge: PracticalChallenge,
-  { courseSlug, lessonSlug }: { courseSlug: string; lessonSlug: string },
+  {
+    courseSlug,
+    lessonSlug,
+    onPassed,
+  }: {
+    courseSlug: string;
+    lessonSlug: string;
+    /**
+     * El juez ha dado la solución por buena. `recorded` dice si el servidor ha
+     * podido dejar constancia (`undefined` cuando no hay cuenta donde hacerlo).
+     */
+    onPassed?: (recorded: boolean | undefined) => void;
+  },
 ) {
   const provider = useMemo(() => getExecutionProvider(), []);
 
@@ -36,15 +52,15 @@ export function useLessonChallenge(
       challengeId: challenge.id,
       language: "cpp",
       source: code,
+      courseSlug,
+      lessonSlug,
     });
 
     setResult(submission);
     setStatus(submission.status);
 
-    // Solo un veredicto explícito del servidor completa la lección.
-    if (submission.status === "passed") {
-      markLessonCompleted(courseSlug, lessonSlug);
-    }
+    // Solo un veredicto explícito del servidor cuenta como desafío resuelto.
+    if (submission.status === "passed") onPassed?.(submission.recorded);
   }
 
   function reset() {
