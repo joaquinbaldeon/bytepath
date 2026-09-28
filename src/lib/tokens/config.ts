@@ -8,7 +8,7 @@
  */
 
 /** Recompensa por completar una lección por primera vez. Debe decir lo mismo que `complete_lesson()`. */
-export const LESSON_COMPLETION_REWARD = 15;
+export const LESSON_COMPLETION_REWARD = 10;
 
 /** Coste de una recarga completa de energía. Debe decir lo mismo que `refill_energy_with_tokens()`. */
-export const ENERGY_REFILL_COST = 50;
+export const ENERGY_REFILL_COST = 100;

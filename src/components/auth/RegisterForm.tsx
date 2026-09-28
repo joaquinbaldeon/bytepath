@@ -6,6 +6,7 @@ import { useActionState, useEffect, useState } from "react";
 import { AuthField } from "@/components/auth/AuthField";
 import { AuthMessage } from "@/components/auth/AuthMessage";
 import { SubmitButton } from "@/components/auth/SubmitButton";
+import { useSubmitKeepingValues } from "@/components/auth/useSubmitKeepingValues";
 import { signUpAction } from "@/lib/auth/actions";
 import { emptyAuthState } from "@/lib/auth/form-state";
 import { AGE_CONFIRMATION_FIELD, TERMS_ACCEPTANCE_FIELD } from "@/lib/auth/signup-consents";
@@ -31,6 +32,10 @@ export function RegisterForm() {
    */
   const [confirmedAge, setConfirmedAge] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  // Un error de registro conserva nombre, correo y casillas; solo se vacían
+  // las contraseñas.
+  const { formRef, onSubmit } = useSubmitKeepingValues(formAction, state.error);
 
   useEffect(() => {
     if (!state.success) return;
@@ -77,7 +82,7 @@ export function RegisterForm() {
   const busy = pending || Boolean(state.success);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form ref={formRef} action={formAction} onSubmit={onSubmit} className="flex flex-col gap-4">
       <AuthField
         id="username"
         name="username"

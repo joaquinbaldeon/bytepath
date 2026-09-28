@@ -51,35 +51,35 @@ begin
   -- Regeneración: función pura, aislada de todo lo demás.
   ---------------------------------------------------------------------------
   v_n := 1;
-  select * into v_calc from public.compute_energy_regen(3::smallint, now() - interval '3 hours');
-  v_ok := v_calc.remaining = 4;
+  select * into v_calc from public.compute_energy_regen(1::smallint, now() - interval '3 hours');
+  v_ok := v_calc.remaining = 2;
   insert into energy_test_results values
-    (v_n, '3 de energía + 3 horas → 4', case when v_ok then 'OK' else 'FALLO' end, 'remaining=' || v_calc.remaining);
+    (v_n, '1 de energía + 3 horas → 2', case when v_ok then 'OK' else 'FALLO' end, 'remaining=' || v_calc.remaining);
 
   v_n := 2;
-  select * into v_calc from public.compute_energy_regen(3::smallint, now() - interval '6 hours');
-  v_ok := v_calc.remaining = 5;
+  select * into v_calc from public.compute_energy_regen(1::smallint, now() - interval '6 hours');
+  v_ok := v_calc.remaining = 3;
   insert into energy_test_results values
-    (v_n, '3 + 6 horas → 5', case when v_ok then 'OK' else 'FALLO' end, 'remaining=' || v_calc.remaining);
+    (v_n, '1 + 6 horas → 3', case when v_ok then 'OK' else 'FALLO' end, 'remaining=' || v_calc.remaining);
 
   v_n := 3;
-  select * into v_calc from public.compute_energy_regen(3::smallint, now() - interval '9 hours');
-  v_ok := v_calc.remaining = 6;
+  select * into v_calc from public.compute_energy_regen(1::smallint, now() - interval '9 hours');
+  v_ok := v_calc.remaining = 4;
   insert into energy_test_results values
-    (v_n, '3 + 9 horas → 6', case when v_ok then 'OK' else 'FALLO' end, 'remaining=' || v_calc.remaining);
+    (v_n, '1 + 9 horas → 4', case when v_ok then 'OK' else 'FALLO' end, 'remaining=' || v_calc.remaining);
 
   v_n := 4;
   select * into v_calc from public.compute_energy_regen(0::smallint, now() - interval '24 hours');
-  v_ok := v_calc.remaining = 6;
+  v_ok := v_calc.remaining = 4;
   insert into energy_test_results values
-    (v_n, '0 + 24 horas → 6, no se acumula más allá del tope',
+    (v_n, '0 + 24 horas → 4, no se acumula más allá del tope',
      case when v_ok then 'OK' else 'FALLO' end, 'remaining=' || v_calc.remaining);
 
   v_n := 5;
-  select * into v_calc from public.compute_energy_regen(6::smallint, now() - interval '100 hours');
-  v_ok := v_calc.remaining = 6;
+  select * into v_calc from public.compute_energy_regen(4::smallint, now() - interval '100 hours');
+  v_ok := v_calc.remaining = 4;
   insert into energy_test_results values
-    (v_n, '6 no supera 6 pase el tiempo que pase', case when v_ok then 'OK' else 'FALLO' end, 'remaining=' || v_calc.remaining);
+    (v_n, '4 no supera 4 pase el tiempo que pase', case when v_ok then 'OK' else 'FALLO' end, 'remaining=' || v_calc.remaining);
 
   v_n := 6;
   select * into v_calc from public.compute_energy_regen(2::smallint, now() - interval '2 hours 59 minutes');
@@ -104,11 +104,11 @@ begin
   v_state := public.get_account_state();
   v_ok := (v_state ->> 'signed_in')::boolean
       and (v_state ->> 'premium')::boolean = false
-      and (v_state ->> 'remaining')::int = 6
-      and (v_state ->> 'limit')::int = 6
+      and (v_state ->> 'remaining')::int = 4
+      and (v_state ->> 'limit')::int = 4
       and v_state ->> 'next_energy_at' is null;
   insert into energy_test_results values
-    (v_n, 'Un Free nuevo empieza con 6/6', case when v_ok then 'OK' else 'FALLO' end, v_state::text);
+    (v_n, 'Un Free nuevo empieza con 4/4', case when v_ok then 'OK' else 'FALLO' end, v_state::text);
 
   v_n := 9;
   insert into public.user_energy (user_id, energy_remaining, last_regen_at)
@@ -155,12 +155,12 @@ begin
   ---------------------------------------------------------------------------
   v_n := 14;
   begin
-    update public.user_energy set energy_remaining = 7 where user_id = v_user;
-    v_ok := false; v_detail := 'Aceptó 7';
+    update public.user_energy set energy_remaining = 5 where user_id = v_user;
+    v_ok := false; v_detail := 'Aceptó 5';
   exception when check_violation then
     v_ok := true; v_detail := 'Rechazado por el CHECK';
   end;
-  insert into energy_test_results values (v_n, 'Imposible más de 6', case when v_ok then 'OK' else 'FALLO' end, v_detail);
+  insert into energy_test_results values (v_n, 'Imposible más de 4', case when v_ok then 'OK' else 'FALLO' end, v_detail);
 
   v_n := 15;
   begin
@@ -209,7 +209,7 @@ begin
   v_n := 19;
   begin
     set local role authenticated;
-    update public.user_energy set energy_remaining = 6 where user_id = v_user;
+    update public.user_energy set energy_remaining = 4 where user_id = v_user;
     reset role;
     v_ok := false; v_detail := 'Un usuario pudo escribir su energía';
   exception when insufficient_privilege then

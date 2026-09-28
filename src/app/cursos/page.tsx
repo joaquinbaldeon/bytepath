@@ -27,12 +27,14 @@ export default async function CoursesPage() {
   const { byCourse } = await readAllCoursesProgress();
 
   // Totales del catálogo, para que el raíl diga de qué tamaño es el camino.
+  // Solo cuenta lo que ya tiene contenido: las lecciones en preparación no
+  // inflan el número.
   const totals = courses.reduce(
     (acc, course) => {
       const stats = getCourseStats(course);
       return {
-        lessons: acc.lessons + stats.lessonCount,
-        minutes: acc.minutes + stats.estimatedMinutes,
+        lessons: acc.lessons + stats.readyLessonCount,
+        minutes: acc.minutes + stats.readyMinutes,
       };
     },
     { lessons: 0, minutes: 0 },
@@ -80,7 +82,7 @@ export default async function CoursesPage() {
                   <RailCard title="Tu ruta" icon={Compass}>
                     <div className="flex flex-col gap-2">
                       <RailStat label="Cursos" value={String(courses.length)} />
-                      <RailStat label="Lecciones" value={String(totals.lessons)} />
+                      <RailStat label="Lecciones disponibles" value={String(totals.lessons)} />
                       <RailStat label="Duración" value={formatDuration(totals.minutes)} />
                     </div>
                   </RailCard>

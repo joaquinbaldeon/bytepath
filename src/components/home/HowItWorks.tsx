@@ -14,14 +14,14 @@ const steps = [
   },
   {
     icon: CodeXml,
-    title: "Practica con problemas",
-    text: "Aplica lo aprendido en problemas de dificultad creciente.",
+    title: "Practica con código real",
+    text: "Resuelve los desafíos de cada lección: tu C++ se compila y se prueba de verdad.",
     accent: "bg-practice/10 text-practice-ink",
   },
   {
     icon: ChartNoAxesColumn,
     title: "Mide tu progreso",
-    text: "Consulta tus lecciones completadas y tus problemas resueltos.",
+    text: "Sigue tu camino: lecciones completadas, energía y tokens.",
     accent: "bg-brand-500/10 text-brand-600",
   },
   {

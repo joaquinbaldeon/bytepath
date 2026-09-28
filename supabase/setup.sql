@@ -278,7 +278,7 @@ grant execute on function public.rate_limit_blocked(text, text, integer, integer
 --
 --   3. La energía se regenera por reloj, no por calendario. Ver la sección 2:
 --      no hay ya un reinicio diario que borre lo que sobra, sino +1 cada 3
---      horas hasta un máximo de 6. Sigue sin haber cron: el cálculo se hace
+--      horas hasta un máximo de 4. Sigue sin haber cron: el cálculo se hace
 --      de forma perezosa, al leer o al escribir, con `compute_energy_regen()`.
 -- ===========================================================================
 
@@ -361,24 +361,29 @@ create unique index if not exists subscriptions_provider_subscription_key
 -- conocido (`energy_remaining`) y desde cuándo cuenta esa cifra
 -- (`last_regen_at`). El valor "de ahora" nunca se lee directamente de la
 -- columna: se recalcula con `compute_energy_regen()`, que aplica +1 por cada
--- bloque de 3 horas transcurridas desde `last_regen_at`, sin superar 6.
+-- bloque de 3 horas transcurridas desde `last_regen_at`, sin superar 4.
 --
 -- No hay reinicio diario ni nada que borre energía sobrante: lo que no se
--- gasta se queda, hasta el tope de 6. Por eso ya no existe una columna de
+-- gasta se queda, hasta el tope de 4. Por eso ya no existe una columna de
 -- fecha aquí (la versión anterior de este archivo tenía `energy_date`; la
 -- migración de abajo la retira de las instalaciones que ya la tuvieran).
 --
 -- El CHECK sigue siendo la última línea de defensa de "nunca negativo" y
--- "nunca más de 6": aunque una función futura se equivocase, la base de datos
+-- "nunca más de 4": aunque una función futura se equivocase, la base de datos
 -- rechaza la escritura.
 --
--- El 6 debe decir lo mismo que FREE_MAX_ENERGY en src/lib/energy/config.ts.
+-- El 4 debe decir lo mismo que FREE_MAX_ENERGY en src/lib/energy/config.ts.
 -- Las 3 horas deben decir lo mismo que ENERGY_REGEN_HOURS en ese archivo.
+--
+-- El tope bajó de 6 a 4. La migración de abajo, además de lo de siempre,
+-- reduce a 4 la energía de cualquier cuenta que tuviera más (5 o 6) ANTES de
+-- endurecer el CHECK: si no se hiciera, el ALTER fallaría en cuanto existiera
+-- una sola fila con un valor que la nueva regla ya no admite.
 -- ---------------------------------------------------------------------------
 create table if not exists public.user_energy (
   user_id uuid primary key references auth.users (id) on delete cascade,
-  energy_remaining smallint not null default 6
-    check (energy_remaining >= 0 and energy_remaining <= 6),
+  energy_remaining smallint not null default 4
+    check (energy_remaining >= 0 and energy_remaining <= 4),
   last_regen_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -392,8 +397,20 @@ create table if not exists public.user_energy (
 alter table public.user_energy add column if not exists last_regen_at timestamptz not null default now();
 alter table public.user_energy drop column if exists energy_date;
 
+-- Migración del tope de 6 a 4, para instalaciones que ya tenían la tabla con
+-- el CHECK antiguo. Primero se recorta lo que hubiera por encima de 4 (nadie
+-- pierde el resto de su cuenta por esto, solo el sobrante de energía por
+-- encima del nuevo máximo), y solo entonces se sustituye el CHECK. Sobre una
+-- instalación nueva (que ya nace con el CHECK de arriba) el UPDATE no
+-- encuentra filas que tocar y el DROP/ADD es CREATE OR REPLACE de facto.
+update public.user_energy set energy_remaining = 4 where energy_remaining > 4;
+alter table public.user_energy drop constraint if exists user_energy_energy_remaining_check;
+alter table public.user_energy
+  add constraint user_energy_energy_remaining_check
+  check (energy_remaining >= 0 and energy_remaining <= 4);
+
 comment on table public.user_energy is
-  'Energía disponible. Se regenera +1 cada 3 horas hasta un máximo de 6; el cálculo real vive en compute_energy_regen(), no en esta tabla directamente.';
+  'Energía disponible. Se regenera +1 cada 3 horas hasta un máximo de 4; el cálculo real vive en compute_energy_regen(), no en esta tabla directamente.';
 
 
 -- ---------------------------------------------------------------------------
@@ -480,7 +497,7 @@ comment on table public.lesson_activations is
 --
 -- Que no haya políticas de INSERT/UPDATE/DELETE es deliberado y es el núcleo
 -- de la seguridad de este sistema: con la clave publicable en el navegador,
--- un usuario puede intentar `update user_energy set energy_remaining = 6`
+-- un usuario puede intentar `update user_energy set energy_remaining = 4`
 -- todas las veces que quiera y RLS lo rechazará siempre, porque no existe
 -- ninguna política que lo permita.
 -- ---------------------------------------------------------------------------
@@ -599,18 +616,17 @@ revoke execute on function public.is_premium(uuid) from public, anon, authentica
 --
 -- Un "tick" son 3 horas exactas. Se cuentan con floor(), nunca se redondea
 -- hacia arriba: a las 2h59m del último tick todavía no ha llegado el
--- siguiente. Al llegar a 6 se considera lleno y el ancla se reinicia a
+-- siguiente. Al llegar a 4 se considera lleno y el ancla se reinicia a
 -- `now()` — no porque haga falta para el cálculo (es puramente funcional, no
 -- hay deriva posible releyendo el mismo ancla antigua una y otra vez), sino
 -- para que la cuenta atrás que ve el estudiante, la próxima vez que gaste
--- energía por debajo de 6, empiece a contar desde el momento real en que dejó
+-- energía por debajo de 4, empiece a contar desde el momento real en que dejó
 -- de estar lleno y no desde un ancla arbitrariamente vieja.
 --
--- Ejemplo (con ancla a las 08:00 y 2/6):
---   11:00 → 1 tick  → 3/6, ancla 11:00
---   14:00 → 1 tick  → 4/6, ancla 14:00
---   17:00 → 1 tick  → 5/6, ancla 17:00
---   20:00 → 1 tick  → 6/6, ancla 20:00 (lleno: se fija a "ahora")
+-- Ejemplo (con ancla a las 08:00 y 1/4):
+--   11:00 → 1 tick  → 2/4, ancla 11:00
+--   14:00 → 1 tick  → 3/4, ancla 14:00
+--   17:00 → 1 tick  → 4/4, ancla 17:00 (lleno: se fija a "ahora")
 -- ---------------------------------------------------------------------------
 create or replace function public.compute_energy_regen(
   p_remaining smallint,
@@ -628,9 +644,9 @@ as $$
     )::int as n
   )
   select
-    least(6, p_remaining + ticks.n)::smallint,
+    least(4, p_remaining + ticks.n)::smallint,
     case
-      when p_remaining + ticks.n >= 6 then now()
+      when p_remaining + ticks.n >= 4 then now()
       when ticks.n > 0 then p_last_regen_at + (ticks.n * interval '3 hours')
       else p_last_regen_at
     end
@@ -715,7 +731,7 @@ begin
 
   if not found then
     -- Sin fila todavía: nunca ha gastado nada, tiene el cupo entero.
-    v_remaining := 6;
+    v_remaining := 4;
     v_anchor := null;
   else
     select r.remaining, r.last_regen_at
@@ -724,10 +740,10 @@ begin
   end if;
 
   return jsonb_build_object(
-    'signed_in', true, 'premium', false, 'limit', 6, 'remaining', v_remaining,
+    'signed_in', true, 'premium', false, 'limit', 4, 'remaining', v_remaining,
     'next_energy_at',
       case
-        when v_remaining >= 6 or v_anchor is null then null
+        when v_remaining >= 4 or v_anchor is null then null
         else v_anchor + interval '3 hours'
       end,
     'tokens', null,
@@ -776,7 +792,7 @@ grant execute on function public.get_account_state(text, text) to authenticated;
 --   · una tabla de saldo (`user_tokens`) y un libro de movimientos
 --     (`token_transactions`), que es también la garantía de que una lección
 --     nunca paga dos veces;
---   · `refill_energy_with_tokens()`, que cambia 50 tokens por energía llena;
+--   · `refill_energy_with_tokens()`, que cambia 100 tokens por energía llena;
 --   · una nueva versión de `get_account_state()` (definida en energy.sql) que
 --     añade el saldo de tokens a lo que ya devolvía.
 --
@@ -784,7 +800,7 @@ grant execute on function public.get_account_state(text, text) to authenticated;
 -- ninguna política de escritura, y toda escritura real pasa por una función
 -- SECURITY DEFINER con `search_path = ''`.
 --
--- Los +15 tokens por completar una lección los reparte `complete_lesson`, en
+-- Los +10 tokens por completar una lección los reparte `complete_lesson`, en
 -- progress.sql, dentro de la misma transacción que gasta la energía y marca la
 -- lección; se apoya en las tablas y el índice único que define este archivo.
 -- ===========================================================================
@@ -893,8 +909,8 @@ grant select on table public.token_transactions to authenticated;
 -- ---------------------------------------------------------------------------
 -- 5. Recargar energía con tokens
 --
--- 50 tokens exactos por energía llena (6/6). Todo o nada: si no hay al menos
--- 50, o si ya está a tope, no se toca ni el saldo ni la energía.
+-- 100 tokens exactos por energía llena (4/4). Todo o nada: si no hay al menos
+-- 100, o si ya está a tope, no se toca ni el saldo ni la energía.
 --
 -- Bloquea SIEMPRE en el mismo orden —primero user_energy, después
 -- user_tokens— y es la única función de todo el sistema que toca ambas
@@ -917,7 +933,7 @@ set search_path = ''
 as $$
 declare
   v_user uuid := auth.uid();
-  v_cost constant integer := 50;
+  v_cost constant integer := 100;
   v_premium boolean;
   v_remaining smallint;
   v_anchor timestamptz;
@@ -939,7 +955,7 @@ begin
   end if;
 
   insert into public.user_energy (user_id, energy_remaining, last_regen_at)
-  values (v_user, 6, now())
+  values (v_user, 4, now())
   on conflict (user_id) do nothing;
 
   -- Candado 1: la fila de energía. Siempre antes que la de tokens.
@@ -951,7 +967,7 @@ begin
        lateral public.compute_energy_regen(e.energy_remaining, e.last_regen_at) r
   where e.user_id = v_user;
 
-  if v_remaining >= 6 then
+  if v_remaining >= 4 then
     -- Ya está lleno: no tiene sentido gastar tokens. Se persiste la
     -- regeneración pendiente igualmente, para no dejar el ancla vieja.
     update public.user_energy set energy_remaining = v_remaining, last_regen_at = v_anchor
@@ -981,7 +997,7 @@ begin
     return jsonb_build_object(
       'refilled', false, 'reason', 'insufficient_tokens',
       'tokens', v_balance, 'remaining', v_remaining,
-      'next_energy_at', case when v_remaining >= 6 then null else v_anchor + interval '3 hours' end
+      'next_energy_at', case when v_remaining >= 4 then null else v_anchor + interval '3 hours' end
     );
   end if;
 
@@ -990,12 +1006,12 @@ begin
   insert into public.token_transactions (user_id, amount, type)
   values (v_user, -v_cost, 'energy_refill');
 
-  update public.user_energy set energy_remaining = 6, last_regen_at = now()
+  update public.user_energy set energy_remaining = 4, last_regen_at = now()
     where user_id = v_user;
 
   return jsonb_build_object(
     'refilled', true, 'reason', null,
-    'tokens', v_balance - v_cost, 'remaining', 6, 'next_energy_at', null
+    'tokens', v_balance - v_cost, 'remaining', 4, 'next_energy_at', null
   );
 end;
 $$;
@@ -1065,7 +1081,7 @@ begin
   select * into v_row from public.user_energy e where e.user_id = v_user;
 
   if not found then
-    v_remaining := 6;
+    v_remaining := 4;
     v_anchor := null;
   else
     select r.remaining, r.last_regen_at
@@ -1074,10 +1090,10 @@ begin
   end if;
 
   return jsonb_build_object(
-    'signed_in', true, 'premium', false, 'limit', 6, 'remaining', v_remaining,
+    'signed_in', true, 'premium', false, 'limit', 4, 'remaining', v_remaining,
     'next_energy_at',
       case
-        when v_remaining >= 6 or v_anchor is null then null
+        when v_remaining >= 4 or v_anchor is null then null
         else v_anchor + interval '3 hours'
       end,
     'tokens', v_tokens,
@@ -1196,7 +1212,7 @@ begin
   select * into v_row from public.user_energy e where e.user_id = p_user;
 
   if not found then
-    return jsonb_build_object('premium', false, 'remaining', 6, 'limit', 6, 'next_energy_at', null);
+    return jsonb_build_object('premium', false, 'remaining', 4, 'limit', 4, 'next_energy_at', null);
   end if;
 
   select r.remaining, r.last_regen_at
@@ -1206,8 +1222,8 @@ begin
   return jsonb_build_object(
     'premium', false,
     'remaining', v_remaining,
-    'limit', 6,
-    'next_energy_at', case when v_remaining >= 6 then null else v_anchor + interval '3 hours' end
+    'limit', 4,
+    'next_energy_at', case when v_remaining >= 4 then null else v_anchor + interval '3 hours' end
   );
 end;
 $$;
@@ -1501,7 +1517,7 @@ grant execute on function public.record_challenge_pass(uuid, text, text) to serv
 --
 -- El único sitio donde se gasta energía, se paga la recompensa y se marca una
 -- lección como completada, y las tres cosas ocurren en UNA transacción: o
--- pasan todas o no pasa ninguna. Ni 6 → 5 → 4 por completar dos veces la
+-- pasan todas o no pasa ninguna. Ni 4 → 3 → 2 por completar dos veces la
 -- misma, ni energía negativa, ni tokens sin lección, ni lección sin cobrar.
 --
 -- Comprueba, en este orden y sin salirse de la transacción:
@@ -1517,7 +1533,7 @@ grant execute on function public.record_challenge_pass(uuid, text, text) to serv
 --      siguiente.
 --
 -- y solo entonces: descuenta exactamente 1, marca completed_at y reparte los
--- +15 (una sola vez por lección, garantizado por el índice único parcial de
+-- +10 (una sola vez por lección, garantizado por el índice único parcial de
 -- token_transactions, no por una comprobación que una carrera pudiera esquivar).
 --
 -- Los parámetros p_prerequisite / p_needs_quiz / p_needs_challenge los conoce
@@ -1544,7 +1560,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_reward constant integer := 15;
+  v_reward constant integer := 10;
   v_completed_at timestamptz;
   v_quiz_status text;
   v_challenge_at timestamptz;
@@ -1615,7 +1631,7 @@ begin
 
   if not v_premium then
     insert into public.user_energy (user_id, energy_remaining, last_regen_at)
-    values (p_user, 6, now())
+    values (p_user, 4, now())
     on conflict (user_id) do nothing;
 
     perform 1 from public.user_energy e where e.user_id = p_user for update;
@@ -1636,7 +1652,7 @@ begin
       return jsonb_build_object(
         'completed', false, 'awarded', false, 'spent', false, 'amount', 0,
         'tokens', v_balance, 'reason', 'no_energy',
-        'premium', false, 'remaining', 0, 'limit', 6,
+        'premium', false, 'remaining', 0, 'limit', 4,
         'next_energy_at', v_anchor + interval '3 hours');
     end if;
 

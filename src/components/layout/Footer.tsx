@@ -1,16 +1,21 @@
 import Link from "next/link";
+import { Badge } from "@/components/ui/Badge";
 import { Container } from "@/components/ui/Container";
 import { Logo } from "@/components/ui/Logo";
 import { legalDocuments } from "@/lib/legal/documents";
 import { routes } from "@/lib/site";
 
-const columns = [
+type FooterLink = { label: string; href: string; soon?: boolean };
+
+// Problemas y Competición todavía no tienen página: llevan a su sección de la
+// Home, que lo explica, y se marcan como «Pronto».
+const columns: { title: string; links: FooterLink[] }[] = [
   {
     title: "Plataforma",
     links: [
       { label: "Cursos", href: routes.courses },
-      { label: "Problemas", href: routes.problems },
-      { label: "Competición", href: routes.competition },
+      { label: "Problemas", href: "/#problemas", soon: true },
+      { label: "Competición", href: "/#competicion", soon: true },
     ],
   },
   {
@@ -49,9 +54,10 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="rounded-control transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+                    className="inline-flex items-center gap-2 rounded-control transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
                   >
                     {link.label}
+                    {link.soon && <Badge tone="soonDark">Pronto</Badge>}
                   </Link>
                 </li>
               ))}

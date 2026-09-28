@@ -11,7 +11,7 @@ export function ProblemsSection() {
       reverse
       className="bg-paper"
       title="Resuelve problemas y afina tu lógica"
-      description="Elige un problema según su dificultad y tema, escribe tu solución en C++ directamente en el navegador y envíala. Cada problema resuelto suma a tu progreso."
+      description="Estamos preparando un banco de problemas por dificultad y tema. Mientras tanto, ya puedes escribir y ejecutar C++ en el navegador con los desafíos de cada lección de los cursos."
       points={[
         "Problemas de dificultad fácil, media y difícil",
         "Temas como programación dinámica, grafos o greedy",
@@ -20,8 +20,8 @@ export function ProblemsSection() {
       ]}
       visual={<ProblemsMock />}
       action={
-        <Button href={routes.problems} variant="outlineLight" arrow>
-          Resolver un problema
+        <Button href={routes.courses} variant="outlineLight" arrow>
+          Practicar con los cursos
         </Button>
       }
     />

@@ -256,7 +256,7 @@ const knownRejections = new Set<string>([
  * Todo lo que importa ocurre dentro de `complete_lesson`, en una sola
  * transacción con las filas bloqueadas: comprobar que la lección anterior está
  * completada y que el quiz y el desafío (si los hay) están superados según el
- * servidor, gastar 1 ⚡ (salvo Premium), pagar +15 tokens una sola vez, marcar
+ * servidor, gastar 1 ⚡ (salvo Premium), pagar +10 tokens una sola vez, marcar
  * `completed_at`. Esta acción solo dice qué exige el contenido y traduce la
  * respuesta.
  *

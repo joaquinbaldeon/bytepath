@@ -16,18 +16,22 @@ const words = [
 // Datos verificables de la plataforma, no estadísticas de uso.
 const facts = [
   { value: "C++", label: "El lenguaje de toda la plataforma" },
-  { value: "3 niveles", label: "Problemas fáciles, medios y difíciles" },
+  { value: "Código real", label: "Desafíos que se compilan y se ejecutan" },
   { value: "Paso a paso", label: "Teoría, cuestionarios y ejercicios" },
 ];
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
-function fadeUp(delay: number) {
-  return {
-    initial: { opacity: 0, y: 16 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.6, delay, ease },
-  };
+/**
+ * Entrada escalonada del contenido principal con CSS (`.bp-hero-in`): solo
+ * mueve, nunca oculta. Título, descripción y botones están visibles en el HTML
+ * del servidor aunque JavaScript tarde o falle (antes empezaban en opacidad 0 y
+ * dependían de Framer Motion para aparecer).
+ */
+const heroIn = "bp-hero-in";
+
+function delay(seconds: number) {
+  return { animationDelay: `${seconds}s` };
 }
 
 export function Hero() {
@@ -44,47 +48,43 @@ export function Hero() {
 
       <Container className="grid items-center gap-20 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
         <div>
-          <motion.p
-            {...fadeUp(0)}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-xs text-slate-300"
+          <p
+            style={delay(0)}
+            className={`${heroIn} inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-xs text-slate-300`}
           >
             <Terminal aria-hidden className="size-3.5 text-brand-300" />
             Programación competitiva en C++
-          </motion.p>
+          </p>
 
           <h1 className="mt-7 font-display text-5xl leading-[1.02] font-semibold tracking-tight sm:text-6xl lg:text-7xl">
             {words.map((word, i) => (
-              <motion.span
-                key={word.text}
-                className="block"
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.15 + i * 0.18, ease }}
-              >
+              <span key={word.text} style={delay(0.1 + i * 0.12)} className={`${heroIn} block`}>
                 {word.text}
                 <span className={word.dot}>.</span>{" "}
-              </motion.span>
+              </span>
             ))}
           </h1>
 
-          <motion.p
-            {...fadeUp(0.7)}
-            className="mt-7 max-w-xl text-lg leading-relaxed text-slate-300"
+          <p
+            style={delay(0.45)}
+            className={`${heroIn} mt-7 max-w-xl text-lg leading-relaxed text-slate-300`}
           >
             BytePath te acompaña desde tu primera línea de C++ hasta tu primer
-            concurso: cursos guiados, problemas para practicar y un espacio para
-            competir.
-          </motion.p>
+            concurso: cursos guiados con teoría, quizzes y desafíos de código que se
+            ejecutan de verdad. Problemas y concursos, muy pronto.
+          </p>
 
-          <motion.div {...fadeUp(0.85)} className="mt-9 flex flex-wrap gap-3">
+          <div style={delay(0.55)} className={`${heroIn} mt-9 flex flex-wrap gap-3`}>
             <Button href={routes.signup} size="lg" arrow>
               Comenzar ahora
             </Button>
-            <Button href="/#problemas" size="lg" variant="outlineDark">
-              Ver problemas
+            <Button href={routes.courses} size="lg" variant="outlineDark">
+              Ver cursos
             </Button>
-          </motion.div>
+          </div>
         </div>
+
+        {/* El editor de ejemplo es decorativo: puede esperar a JavaScript. */}
 
         <motion.div
           initial={{ opacity: 0, y: 32 }}
@@ -96,9 +96,9 @@ export function Hero() {
       </Container>
 
       <Container className="mt-24">
-        <motion.dl
-          {...fadeUp(1.1)}
-          className="grid border-t border-white/10 sm:grid-cols-3"
+        <dl
+          style={delay(0.65)}
+          className={`${heroIn} grid border-t border-white/10 sm:grid-cols-3`}
         >
           {facts.map((fact) => (
             <div
@@ -109,7 +109,7 @@ export function Hero() {
               <dd className="mt-1 text-sm text-slate-400">{fact.label}</dd>
             </div>
           ))}
-        </motion.dl>
+        </dl>
       </Container>
     </section>
   );

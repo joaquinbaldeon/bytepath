@@ -79,12 +79,28 @@ export function getAdjacentLessons(course: Course, lessonSlug: string) {
   };
 }
 
+/**
+ * Una lección está lista cuando tiene teoría escrita. Las que aún no la tienen
+ * se muestran como «En preparación» (catálogo, página del curso, camino). Se
+ * deduce del propio contenido: en cuanto se escribe la teoría de una lección,
+ * deja de marcarse sola, sin tocar nada más.
+ */
+export function isLessonReady(lesson: Lesson): boolean {
+  return lesson.blocks.length > 0;
+}
+
 export function getCourseStats(course: Course) {
   const lessons = getCourseLessons(course);
+  const ready = lessons.filter(({ lesson }) => isLessonReady(lesson));
   return {
     moduleCount: course.modules.length,
     lessonCount: lessons.length,
     estimatedMinutes: lessons.reduce((total, { lesson }) => total + lesson.estimatedMinutes, 0),
+    /** Lecciones con contenido y su duración: lo que de verdad se puede estudiar hoy. */
+    readyLessonCount: ready.length,
+    readyMinutes: ready.reduce((total, { lesson }) => total + lesson.estimatedMinutes, 0),
+    /** Tiene lecciones todavía sin contenido. */
+    inPreparation: ready.length < lessons.length,
   };
 }
 

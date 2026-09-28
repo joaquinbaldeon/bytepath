@@ -53,18 +53,26 @@ function getSnapshot(): number {
   return Math.floor(Date.now() / 60_000);
 }
 
-/** En el servidor no hay reloj de navegador que leer; se resuelve al hidratar. */
+/**
+ * En el servidor no hay reloj de navegador que leer, así que no hay un
+ * "ahora" real. `-1` es un centinela, no un instante: si se tratara como
+ * minuto 0 (epoch), la resta de más abajo daría el tiempo hasta `targetIso`
+ * contado desde 1970, un número de horas absurdo durante ese primer render
+ * (y en el HTML que llega del servidor) hasta que el reloj real toma el
+ * relevo al montarse.
+ */
 function getServerSnapshot(): number {
-  return 0;
+  return -1;
 }
 
 /**
  * Cuenta atrás hasta `targetIso`, o `null` si no hay ningún instante que
- * mostrar (ya está al tope, o no aplica).
+ * mostrar (ya está al tope, no aplica, o el reloj real todavía no se ha
+ * montado en el cliente).
  */
 export function useCountdown(targetIso: string | null): string | null {
   const minuteBucket = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
-  if (!targetIso) return null;
+  if (!targetIso || minuteBucket < 0) return null;
   return formatCountdown(new Date(targetIso).getTime() - minuteBucket * 60_000);
 }

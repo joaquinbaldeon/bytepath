@@ -87,7 +87,7 @@ begin
   select * into v_row from public.user_energy e where e.user_id = p_user;
 
   if not found then
-    return jsonb_build_object('premium', false, 'remaining', 6, 'limit', 6, 'next_energy_at', null);
+    return jsonb_build_object('premium', false, 'remaining', 4, 'limit', 4, 'next_energy_at', null);
   end if;
 
   select r.remaining, r.last_regen_at
@@ -97,8 +97,8 @@ begin
   return jsonb_build_object(
     'premium', false,
     'remaining', v_remaining,
-    'limit', 6,
-    'next_energy_at', case when v_remaining >= 6 then null else v_anchor + interval '3 hours' end
+    'limit', 4,
+    'next_energy_at', case when v_remaining >= 4 then null else v_anchor + interval '3 hours' end
   );
 end;
 $$;
@@ -392,7 +392,7 @@ grant execute on function public.record_challenge_pass(uuid, text, text) to serv
 --
 -- El único sitio donde se gasta energía, se paga la recompensa y se marca una
 -- lección como completada, y las tres cosas ocurren en UNA transacción: o
--- pasan todas o no pasa ninguna. Ni 6 → 5 → 4 por completar dos veces la
+-- pasan todas o no pasa ninguna. Ni 4 → 3 → 2 por completar dos veces la
 -- misma, ni energía negativa, ni tokens sin lección, ni lección sin cobrar.
 --
 -- Comprueba, en este orden y sin salirse de la transacción:
@@ -408,7 +408,7 @@ grant execute on function public.record_challenge_pass(uuid, text, text) to serv
 --      siguiente.
 --
 -- y solo entonces: descuenta exactamente 1, marca completed_at y reparte los
--- +15 (una sola vez por lección, garantizado por el índice único parcial de
+-- +10 (una sola vez por lección, garantizado por el índice único parcial de
 -- token_transactions, no por una comprobación que una carrera pudiera esquivar).
 --
 -- Los parámetros p_prerequisite / p_needs_quiz / p_needs_challenge los conoce
@@ -435,7 +435,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_reward constant integer := 15;
+  v_reward constant integer := 10;
   v_completed_at timestamptz;
   v_quiz_status text;
   v_challenge_at timestamptz;
@@ -506,7 +506,7 @@ begin
 
   if not v_premium then
     insert into public.user_energy (user_id, energy_remaining, last_regen_at)
-    values (p_user, 6, now())
+    values (p_user, 4, now())
     on conflict (user_id) do nothing;
 
     perform 1 from public.user_energy e where e.user_id = p_user for update;
@@ -527,7 +527,7 @@ begin
       return jsonb_build_object(
         'completed', false, 'awarded', false, 'spent', false, 'amount', 0,
         'tokens', v_balance, 'reason', 'no_energy',
-        'premium', false, 'remaining', 0, 'limit', 6,
+        'premium', false, 'remaining', 0, 'limit', 4,
         'next_energy_at', v_anchor + interval '3 hours');
     end if;
 

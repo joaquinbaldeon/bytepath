@@ -46,10 +46,10 @@ export const pillars = [
     verb: "Practica",
     title: "Problemas",
     description:
-      "Resuelve problemas por dificultad y tema, escribe tu solución en C++ y envíala.",
+      "Un banco de problemas por dificultad y tema. Mientras llega, practica con los desafíos de cada lección.",
     href: "/#problemas",
     cta: "Ver problemas",
-    soon: false,
+    soon: true,
   },
   {
     id: "compete",

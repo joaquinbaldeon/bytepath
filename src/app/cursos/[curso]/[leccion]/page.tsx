@@ -27,7 +27,7 @@ export async function generateMetadata({
   const { curso, leccion } = await params;
   const course = getCourse(curso);
   const context = course && getLesson(course, leccion);
-  if (!course || !context) return {};
+  if (!course || !context) return { title: "Página no encontrada · BytePath" };
 
   return {
     title: `${context.lesson.title} · ${course.title} · BytePath`,

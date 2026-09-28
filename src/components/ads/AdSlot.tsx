@@ -1,15 +1,15 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
-import Link from "next/link";
 import { useAccountState } from "@/lib/energy/store";
-import { routes } from "@/lib/site";
 
 /**
  * Hueco de anuncio del raíl lateral.
  *
  * Todavía no hay ningún proveedor de publicidad: esto es el sitio reservado y
- * la regla de quién lo ve, que es lo que había que dejar resuelto.
+ * la regla de quién lo ve, que es lo que había que dejar resuelto. Mientras no
+ * haya anuncios ni Premium de pago, el hueco lo dice tal cual, sin aparentar un
+ * sistema comercial que no existe. Mantiene el rótulo «Patrocinado»: los
+ * Términos y la Política de Privacidad describen este espacio con ese nombre.
  *
  * La regla, literalmente: si el usuario es Premium, este componente devuelve
  * `null`. No se pinta y se oculta; no llega a existir en el árbol. La
@@ -42,16 +42,9 @@ export function AdSlot() {
       <p className="font-mono text-label tracking-wider text-fg-subtle uppercase">Patrocinado</p>
 
       <p className="mt-2.5 text-dense leading-6 text-fg-muted">
-        Este espacio mantiene BytePath gratis para todo el mundo.
+        Hoy BytePath no muestra anuncios. Este espacio está reservado por si algún día los hay, y
+        lo avisaríamos antes.
       </p>
-
-      <Link
-        href={routes.premium}
-        className="focus-ring mt-3 inline-flex items-center gap-1.5 rounded-control text-dense font-medium text-brand-ink hover:underline"
-      >
-        <Sparkles aria-hidden className="size-3.5" />
-        Quitar anuncios con Premium
-      </Link>
     </aside>
   );
 }

@@ -49,7 +49,7 @@ export async function generateMetadata({
 }: PageProps<"/cursos/[curso]">): Promise<Metadata> {
   const { curso } = await params;
   const course = getCourse(curso);
-  if (!course) return {};
+  if (!course) return { title: "Página no encontrada · BytePath" };
 
   return {
     title: `${course.title} · BytePath`,
@@ -106,6 +106,7 @@ export default async function CoursePage({ params }: PageProps<"/cursos/[curso]"
               <Badge tone={difficultyTone[course.difficulty]}>
                 {difficultyLabels[course.difficulty]}
               </Badge>
+              {stats.inPreparation && <Badge tone="soonDark">En preparación</Badge>}
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-0.5 font-mono text-label text-slate-300">
                 <Terminal aria-hidden className="size-3" />
                 {course.language}
@@ -124,6 +125,12 @@ export default async function CoursePage({ params }: PageProps<"/cursos/[curso]"
               {course.title}
             </h1>
             <p className="mt-3 max-w-2xl leading-relaxed text-slate-300">{course.description}</p>
+            {stats.inPreparation && (
+              <p className="mt-3 max-w-2xl text-dense leading-6 text-slate-400">
+                Curso en preparación: hoy tiene {stats.readyLessonCount} de {stats.lessonCount}{" "}
+                lecciones con contenido. Las demás aparecen en el camino como «En preparación».
+              </p>
+            )}
 
             {resume && (
               <div className="mt-6">
@@ -216,8 +223,18 @@ export default async function CoursePage({ params }: PageProps<"/cursos/[curso]"
                   <RailSection title="Este curso" icon={Route}>
                     <div className="flex flex-col gap-2">
                       <RailStat label="Sectores" value={String(stats.moduleCount)} />
-                      <RailStat label="Lecciones" value={String(stats.lessonCount)} />
-                      <RailStat label="Duración" value={formatDuration(stats.estimatedMinutes)} />
+                      <RailStat
+                        label={stats.inPreparation ? "Lecciones disponibles" : "Lecciones"}
+                        value={
+                          stats.inPreparation
+                            ? `${stats.readyLessonCount} de ${stats.lessonCount}`
+                            : String(stats.lessonCount)
+                        }
+                      />
+                      <RailStat
+                        label="Duración"
+                        value={formatDuration(stats.inPreparation ? stats.readyMinutes : stats.estimatedMinutes)}
+                      />
                       <RailStat label="Lenguaje" value={course.language} />
                     </div>
                   </RailSection>

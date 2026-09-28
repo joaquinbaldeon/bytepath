@@ -44,6 +44,7 @@ export function CourseCard({
           {course.language}
         </span>
         <Badge tone={difficultyTone[course.difficulty]}>{difficultyLabels[course.difficulty]}</Badge>
+        {stats.inPreparation && <Badge tone="soon">En preparación</Badge>}
       </div>
 
       <h3 className="mt-3 font-display text-lg font-semibold">
@@ -62,12 +63,16 @@ export function CourseCard({
         <div className="inline-flex items-center gap-1.5">
           <BookOpen aria-hidden className="size-4 text-fg-subtle" />
           <dt className="sr-only">Lecciones</dt>
-          <dd>{stats.lessonCount} lecciones</dd>
+          <dd>
+            {stats.inPreparation
+              ? `${stats.readyLessonCount} de ${stats.lessonCount} lecciones disponibles`
+              : `${stats.lessonCount} lecciones`}
+          </dd>
         </div>
         <div className="inline-flex items-center gap-1.5">
           <Clock aria-hidden className="size-4 text-fg-subtle" />
           <dt className="sr-only">Duración estimada</dt>
-          <dd>{formatDuration(stats.estimatedMinutes)}</dd>
+          <dd>{formatDuration(stats.inPreparation ? stats.readyMinutes : stats.estimatedMinutes)}</dd>
         </div>
       </dl>
 

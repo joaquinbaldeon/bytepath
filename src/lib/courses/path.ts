@@ -1,5 +1,5 @@
 import { getPrerequisite, isLessonUnlocked, orderedLessons } from "@/lib/courses/access";
-import { lessonPath } from "@/lib/courses/api";
+import { isLessonReady, lessonPath } from "@/lib/courses/api";
 import { completedSlugs, type CourseProgressMap, type QuizStatus } from "@/lib/courses/progress";
 import type { Course, LessonKind } from "@/lib/courses/types";
 
@@ -46,6 +46,8 @@ export type PathLesson = {
   quizTotal: number;
   /** Título de la lección que hay que completar antes, si está bloqueada por progreso. */
   lockedBy: string | null;
+  /** Todavía sin contenido (ver `isLessonReady`): el camino lo indica. */
+  inPreparation: boolean;
   href: string;
 };
 
@@ -98,6 +100,7 @@ export function buildPath(course: Course, progress: CourseProgressMap, enforce: 
         quizSolved: row?.solvedIds.length ?? 0,
         quizTotal: lesson.quiz?.questions.length ?? 0,
         lockedBy: state === "locked" ? (getPrerequisite(course, lesson.slug)?.lesson.title ?? null) : null,
+        inPreparation: !isLessonReady(lesson),
         href: lessonPath(course.slug, lesson.slug),
       };
     });

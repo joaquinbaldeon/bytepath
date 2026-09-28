@@ -376,6 +376,7 @@ function Row({
               {lesson.hasChallenge && lesson.kind !== "quiz" && (
                 <span className="text-compete-ink"> · Desafío</span>
               )}
+              {lesson.inPreparation && <span className="text-fg-muted"> · En preparación</span>}
             </span>
           </span>
           <span

@@ -77,6 +77,7 @@ export default async function AccountPage({ searchParams }: PageProps<"/cuenta">
             <EconomyCard
               isPremium={state.isPremium}
               initialRemaining={state.remaining}
+              initialLimit={state.limit}
               initialTokens={state.tokens}
               initialNextEnergyAt={state.nextEnergyAt}
             />

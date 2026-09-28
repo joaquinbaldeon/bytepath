@@ -6,6 +6,7 @@ import { useActionState, useEffect } from "react";
 import { AuthField } from "@/components/auth/AuthField";
 import { AuthMessage } from "@/components/auth/AuthMessage";
 import { SubmitButton } from "@/components/auth/SubmitButton";
+import { useSubmitKeepingValues } from "@/components/auth/useSubmitKeepingValues";
 import { signInAction } from "@/lib/auth/actions";
 import { emptyAuthState } from "@/lib/auth/form-state";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -27,6 +28,9 @@ export function LoginForm({
   const touched = Boolean(state.error || state.notice || state.success);
   const error = state.error ?? (touched ? null : initialError || null);
   const notice = state.notice ?? (touched ? null : initialNotice || null);
+
+  // Un error de acceso conserva el correo escrito; solo se vacía la contraseña.
+  const { formRef, onSubmit } = useSubmitKeepingValues(formAction, state.error);
 
   useEffect(() => {
     if (!state.success) return;
@@ -59,7 +63,7 @@ export function LoginForm({
   const busy = pending || Boolean(state.success);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form ref={formRef} action={formAction} onSubmit={onSubmit} className="flex flex-col gap-4">
       <AuthField
         id="email"
         name="email"

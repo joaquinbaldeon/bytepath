@@ -8,7 +8,7 @@ import { useState } from "react";
  *
  * Es la representación única de la energía en BytePath —la barra superior, el
  * panel del camino y la confirmación al completar una lección la usan—, y es
- * quien anima el cambio: al bajar de 6 a 5, el sexto rayo se apaga con un
+ * quien anima el cambio: al bajar de 4 a 3, el cuarto rayo se apaga con un
  * destello, y al subir se enciende. Lo hace el propio rayo que cambia, no el
  * medidor entero, para que se lea como "se ha ido ESTE".
  *
@@ -45,7 +45,7 @@ export function EnergyBolts({
 
   if (remaining !== previous) {
     setPrevious(remaining);
-    // Un salto grande (recarga de 0 a 6) no anima cada rayo: solo el último que cambió.
+    // Un salto grande (recarga de 0 a 4) no anima cada rayo: solo el último que cambió.
     setChange(
       remaining < previous
         ? { index: remaining, kind: "drop" }

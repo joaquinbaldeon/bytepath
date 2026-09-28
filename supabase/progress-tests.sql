@@ -61,7 +61,7 @@ begin
   delete from public.user_tokens where user_id = v_user;
   delete from public.subscriptions where user_id = v_user;
   delete from public.user_energy where user_id = v_user;
-  insert into public.user_energy (user_id, energy_remaining, last_regen_at) values (v_user, 6, now());
+  insert into public.user_energy (user_id, energy_remaining, last_regen_at) values (v_user, 4, now());
 
   ---------------------------------------------------------------------------
   -- TEST 5 · Lección 1 sin completar → lección 2 bloqueada
@@ -80,7 +80,7 @@ begin
 
   -- Iniciar es gratis: estudiar no gasta energía.
   select energy_remaining into v_energy from public.user_energy where user_id = v_user;
-  perform pg_temp.chk(13, 'Estudiar no gasta energía', v_energy = 6, 'energía=' || v_energy);
+  perform pg_temp.chk(13, 'Estudiar no gasta energía', v_energy = 4, 'energía=' || v_energy);
 
   -- Iniciar dos veces es iniciar una.
   v_out := public.start_lesson(v_user, '__t__', 'l1', null);
@@ -95,7 +95,7 @@ begin
   select * into v_row from public.lesson_activations where user_id = v_user and course_slug = '__t__' and lesson_slug = 'l1';
   perform pg_temp.chk(15, 'Completar sin haber hecho el quiz se rechaza (quiz_pending)',
     (v_out ->> 'completed')::boolean = false and (v_out ->> 'reason') = 'quiz_pending'
-    and v_energy = 6 and v_row.completed_at is null and coalesce((v_out ->> 'tokens')::int, 0) = 0,
+    and v_energy = 4 and v_row.completed_at is null and coalesce((v_out ->> 'tokens')::int, 0) = 0,
     v_out::text);
 
   ---------------------------------------------------------------------------
@@ -133,19 +133,19 @@ begin
     (v_out ->> 'reason') = 'challenge_pending' and (v_out ->> 'completed')::boolean = false, v_out::text);
 
   select energy_remaining into v_energy from public.user_energy where user_id = v_user;
-  perform pg_temp.chk(21, 'Ninguno de esos rechazos ha gastado energía', v_energy = 6, 'energía=' || v_energy);
+  perform pg_temp.chk(21, 'Ninguno de esos rechazos ha gastado energía', v_energy = 4, 'energía=' || v_energy);
 
   ---------------------------------------------------------------------------
-  -- TEST 1 · 6 de energía → completar → 5
+  -- TEST 1 · 4 de energía → completar → 3
   ---------------------------------------------------------------------------
   perform public.record_challenge_pass(v_user, '__t__', 'l1');
   v_out := public.complete_lesson(v_user, '__t__', 'l1', null, true, true);
   select energy_remaining into v_energy from public.user_energy where user_id = v_user;
   select * into v_row from public.lesson_activations where user_id = v_user and course_slug = '__t__' and lesson_slug = 'l1';
   select balance into v_tokens from public.user_tokens where user_id = v_user;
-  perform pg_temp.chk(1, 'TEST 1: 6 de energía → completar la lección → 5, +15 tokens, completed_at',
+  perform pg_temp.chk(1, 'TEST 1: 4 de energía → completar la lección → 3, +10 tokens, completed_at',
     (v_out ->> 'completed')::boolean and (v_out ->> 'spent')::boolean and (v_out ->> 'awarded')::boolean
-    and v_energy = 5 and (v_out ->> 'remaining')::int = 5 and v_tokens = 15 and v_row.completed_at is not null,
+    and v_energy = 3 and (v_out ->> 'remaining')::int = 3 and v_tokens = 10 and v_row.completed_at is not null,
     v_out::text);
 
   ---------------------------------------------------------------------------
@@ -155,27 +155,27 @@ begin
   perform pg_temp.chk(7, 'TEST 7: completada la 1, la lección 2 se desbloquea', (v_out ->> 'started')::boolean, v_out::text);
 
   ---------------------------------------------------------------------------
-  -- TEST 8 · Doble clic / reintento: solo -1 y solo +15
+  -- TEST 8 · Doble clic / reintento: solo -1 y solo +10
   ---------------------------------------------------------------------------
   v_out := public.complete_lesson(v_user, '__t__', 'l1', null, true, true);
   v_out := public.complete_lesson(v_user, '__t__', 'l1', null, true, true);
   select energy_remaining into v_energy from public.user_energy where user_id = v_user;
   select balance into v_tokens from public.user_tokens where user_id = v_user;
   select count(*) into v_count from public.token_transactions where user_id = v_user and lesson_slug = 'l1';
-  perform pg_temp.chk(8, 'TEST 8: completar tres veces la misma lección → solo -1 energía y solo +15 tokens',
+  perform pg_temp.chk(8, 'TEST 8: completar tres veces la misma lección → solo -1 energía y solo +10 tokens',
     (v_out ->> 'reason') = 'already_completed' and (v_out ->> 'spent')::boolean = false
-    and v_energy = 5 and v_tokens = 15 and v_count = 1,
+    and v_energy = 3 and v_tokens = 10 and v_count = 1,
     'energía=' || v_energy || ' tokens=' || v_tokens || ' movimientos=' || v_count);
 
   ---------------------------------------------------------------------------
-  -- TEST 2 · 5 → completar la segunda → 4
+  -- TEST 2 · 3 → completar la segunda → 2
   ---------------------------------------------------------------------------
   foreach q in array qs loop
     perform public.record_quiz_answer(v_user, '__t__', 'l2', q, true, qs);
   end loop;
   v_out := public.complete_lesson(v_user, '__t__', 'l2', 'l1', true, false);
   select energy_remaining into v_energy from public.user_energy where user_id = v_user;
-  perform pg_temp.chk(2, 'TEST 2: 5 de energía → completar la segunda → 4', (v_out ->> 'completed')::boolean and v_energy = 4, 'energía=' || v_energy);
+  perform pg_temp.chk(2, 'TEST 2: 3 de energía → completar la segunda → 2', (v_out ->> 'completed')::boolean and v_energy = 2, 'energía=' || v_energy);
 
   ---------------------------------------------------------------------------
   -- TEST 3 · 0 de energía: se puede estudiar y avanzar el quiz, pero no completar
@@ -221,22 +221,22 @@ begin
     (v_out ->> 'completed')::boolean and (v_out ->> 'spent')::boolean and v_energy = 0, v_out::text);
 
   ---------------------------------------------------------------------------
-  -- TEST 12 · Regeneración: +1 cada 3 horas, máximo 6
+  -- TEST 12 · Regeneración: +1 cada 3 horas, máximo 4
   ---------------------------------------------------------------------------
   perform public.start_lesson(v_user, '__t__', 'l4', 'l3');
   update public.user_energy set energy_remaining = 0, last_regen_at = now() - interval '24 hours' where user_id = v_user;
   v_out := public._energy_view(v_user);
-  perform pg_temp.chk(9, 'TEST 12: 0 de energía y 24 horas → 6, no más', (v_out ->> 'remaining')::int = 6, v_out::text);
+  perform pg_temp.chk(9, 'TEST 12: 0 de energía y 24 horas → 4, no más', (v_out ->> 'remaining')::int = 4, v_out::text);
 
-  update public.user_energy set energy_remaining = 3, last_regen_at = now() - interval '6 hours' where user_id = v_user;
+  update public.user_energy set energy_remaining = 1, last_regen_at = now() - interval '6 hours' where user_id = v_user;
   v_out := public._energy_view(v_user);
-  perform pg_temp.chk(10, 'TEST 12: 3 de energía y 6 horas → 5', (v_out ->> 'remaining')::int = 5, v_out::text);
+  perform pg_temp.chk(10, 'TEST 12: 1 de energía y 6 horas → 3', (v_out ->> 'remaining')::int = 3, v_out::text);
 
-  -- Y la operación real usa esa misma regeneración: 3 + 6h = 5, gasta 1 → 4.
+  -- Y la operación real usa esa misma regeneración: 1 + 6h = 3, gasta 1 → 2.
   v_out := public.complete_lesson(v_user, '__t__', 'l4', 'l3', false, false);
   select energy_remaining into v_energy from public.user_energy where user_id = v_user;
-  perform pg_temp.chk(11, 'Completar aplica la regeneración pendiente antes de gastar (3 + 6h = 5, -1 = 4)',
-    (v_out ->> 'completed')::boolean and v_energy = 4, 'energía=' || v_energy);
+  perform pg_temp.chk(11, 'Completar aplica la regeneración pendiente antes de gastar (1 + 6h = 3, -1 = 2)',
+    (v_out ->> 'completed')::boolean and v_energy = 2, 'energía=' || v_energy);
 
   ---------------------------------------------------------------------------
   -- Atomicidad: si algo falla a mitad, no queda nada a medias.
@@ -259,16 +259,16 @@ begin
   update public.user_tokens set balance = 60 where user_id = v_user;
 
   ---------------------------------------------------------------------------
-  -- TEST 11 · Premium: energía infinita, completar no consume, +15 tokens
+  -- TEST 11 · Premium: energía infinita, completar no consume, +10 tokens
   ---------------------------------------------------------------------------
   insert into public.subscriptions (user_id, status, plan) values (v_user, 'active', 'premium_test');
   select energy_remaining into v_before from public.user_energy where user_id = v_user;
   v_out := public.complete_lesson(v_user, '__t__', 'l5', 'l4', false, false);
   select energy_remaining into v_energy from public.user_energy where user_id = v_user;
   select balance into v_tokens from public.user_tokens where user_id = v_user;
-  perform pg_temp.chk(26, 'TEST 11: Premium completa sin gastar energía y cobra +15',
+  perform pg_temp.chk(26, 'TEST 11: Premium completa sin gastar energía y cobra +10',
     (v_out ->> 'completed')::boolean and (v_out ->> 'spent')::boolean = false and (v_out ->> 'premium')::boolean
-    and v_out ->> 'remaining' is null and v_energy = v_before and v_tokens = 75,
+    and v_out ->> 'remaining' is null and v_energy = v_before and v_tokens = 70,
     v_out::text);
 
   -- Con la energía a 0 también: Premium nunca se queda sin energía.
@@ -283,8 +283,12 @@ begin
   ---------------------------------------------------------------------------
   select count(*) into v_count from public.token_transactions where user_id = v_user and type = 'lesson_completion';
   select balance into v_tokens from public.user_tokens where user_id = v_user;
-  perform pg_temp.chk(28, 'Cada lección completada tiene exactamente un movimiento de +15',
-    v_count = 6 and v_tokens = 90, v_count || ' movimientos, saldo ' || v_tokens);
+  -- El saldo no es 6 × 10: a mitad del guion (prueba de atomicidad) el saldo
+  -- se fuerza a 60 a propósito (ver más arriba) para provocar un desbordamiento
+  -- y luego seguir probando; de ahí en adelante solo se han sumado los +10 de
+  -- l5 y l6, así que el total esperado es 60 + 10 + 10 = 80.
+  perform pg_temp.chk(28, 'Cada lección completada tiene exactamente un movimiento de +10',
+    v_count = 6 and v_tokens = 80, v_count || ' movimientos, saldo ' || v_tokens);
 
   ---------------------------------------------------------------------------
   -- TEST 10 · Llamadas directas desde el navegador
@@ -293,7 +297,7 @@ begin
   -- ganara algo.
   delete from public.lesson_activations where user_id = v_user and course_slug = '__t__' and lesson_slug = 'l7';
   insert into public.lesson_activations (user_id, course_slug, lesson_slug) values (v_user, '__t__', 'l7');
-  update public.user_energy set energy_remaining = 6, last_regen_at = now() where user_id = v_user;
+  update public.user_energy set energy_remaining = 4, last_regen_at = now() where user_id = v_user;
 
   foreach v_fn in array array[
     'public.complete_lesson(''%1$s'', ''__t__'', ''l7'', null, false, false)',
@@ -321,7 +325,7 @@ begin
   select energy_remaining into v_energy from public.user_energy where user_id = v_user;
   select balance into v_tokens from public.user_tokens where user_id = v_user;
   perform pg_temp.chk(30, 'TEST 10: tras los intentos directos, ni energía ni tokens ni progreso cambian',
-    v_row.completed_at is null and v_energy = 6 and v_tokens = 90, 'energía=' || v_energy || ' tokens=' || v_tokens);
+    v_row.completed_at is null and v_energy = 4 and v_tokens = 80, 'energía=' || v_energy || ' tokens=' || v_tokens);
 
   -- Solo el servidor puede.
   begin

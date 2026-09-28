@@ -8,7 +8,7 @@
 --   · una tabla de saldo (`user_tokens`) y un libro de movimientos
 --     (`token_transactions`), que es también la garantía de que una lección
 --     nunca paga dos veces;
---   · `refill_energy_with_tokens()`, que cambia 50 tokens por energía llena;
+--   · `refill_energy_with_tokens()`, que cambia 100 tokens por energía llena;
 --   · una nueva versión de `get_account_state()` (definida en energy.sql) que
 --     añade el saldo de tokens a lo que ya devolvía.
 --
@@ -16,7 +16,7 @@
 -- ninguna política de escritura, y toda escritura real pasa por una función
 -- SECURITY DEFINER con `search_path = ''`.
 --
--- Los +15 tokens por completar una lección los reparte `complete_lesson`, en
+-- Los +10 tokens por completar una lección los reparte `complete_lesson`, en
 -- progress.sql, dentro de la misma transacción que gasta la energía y marca la
 -- lección; se apoya en las tablas y el índice único que define este archivo.
 -- ===========================================================================
@@ -125,8 +125,8 @@ grant select on table public.token_transactions to authenticated;
 -- ---------------------------------------------------------------------------
 -- 5. Recargar energía con tokens
 --
--- 50 tokens exactos por energía llena (6/6). Todo o nada: si no hay al menos
--- 50, o si ya está a tope, no se toca ni el saldo ni la energía.
+-- 100 tokens exactos por energía llena (4/4). Todo o nada: si no hay al menos
+-- 100, o si ya está a tope, no se toca ni el saldo ni la energía.
 --
 -- Bloquea SIEMPRE en el mismo orden —primero user_energy, después
 -- user_tokens— y es la única función de todo el sistema que toca ambas
@@ -149,7 +149,7 @@ set search_path = ''
 as $$
 declare
   v_user uuid := auth.uid();
-  v_cost constant integer := 50;
+  v_cost constant integer := 100;
   v_premium boolean;
   v_remaining smallint;
   v_anchor timestamptz;
@@ -171,7 +171,7 @@ begin
   end if;
 
   insert into public.user_energy (user_id, energy_remaining, last_regen_at)
-  values (v_user, 6, now())
+  values (v_user, 4, now())
   on conflict (user_id) do nothing;
 
   -- Candado 1: la fila de energía. Siempre antes que la de tokens.
@@ -183,7 +183,7 @@ begin
        lateral public.compute_energy_regen(e.energy_remaining, e.last_regen_at) r
   where e.user_id = v_user;
 
-  if v_remaining >= 6 then
+  if v_remaining >= 4 then
     -- Ya está lleno: no tiene sentido gastar tokens. Se persiste la
     -- regeneración pendiente igualmente, para no dejar el ancla vieja.
     update public.user_energy set energy_remaining = v_remaining, last_regen_at = v_anchor
@@ -213,7 +213,7 @@ begin
     return jsonb_build_object(
       'refilled', false, 'reason', 'insufficient_tokens',
       'tokens', v_balance, 'remaining', v_remaining,
-      'next_energy_at', case when v_remaining >= 6 then null else v_anchor + interval '3 hours' end
+      'next_energy_at', case when v_remaining >= 4 then null else v_anchor + interval '3 hours' end
     );
   end if;
 
@@ -222,12 +222,12 @@ begin
   insert into public.token_transactions (user_id, amount, type)
   values (v_user, -v_cost, 'energy_refill');
 
-  update public.user_energy set energy_remaining = 6, last_regen_at = now()
+  update public.user_energy set energy_remaining = 4, last_regen_at = now()
     where user_id = v_user;
 
   return jsonb_build_object(
     'refilled', true, 'reason', null,
-    'tokens', v_balance - v_cost, 'remaining', 6, 'next_energy_at', null
+    'tokens', v_balance - v_cost, 'remaining', 4, 'next_energy_at', null
   );
 end;
 $$;
@@ -297,7 +297,7 @@ begin
   select * into v_row from public.user_energy e where e.user_id = v_user;
 
   if not found then
-    v_remaining := 6;
+    v_remaining := 4;
     v_anchor := null;
   else
     select r.remaining, r.last_regen_at
@@ -306,10 +306,10 @@ begin
   end if;
 
   return jsonb_build_object(
-    'signed_in', true, 'premium', false, 'limit', 6, 'remaining', v_remaining,
+    'signed_in', true, 'premium', false, 'limit', 4, 'remaining', v_remaining,
     'next_energy_at',
       case
-        when v_remaining >= 6 or v_anchor is null then null
+        when v_remaining >= 4 or v_anchor is null then null
         else v_anchor + interval '3 hours'
       end,
     'tokens', v_tokens,

@@ -34,7 +34,7 @@ function toRefillReason(value: string | null): RefillOutcome["reason"] {
   return null;
 }
 
-/** Cambia 50 tokens por energía llena. Ver `refill_energy_with_tokens()` para las reglas. */
+/** Cambia 100 tokens por energía llena. Ver `refill_energy_with_tokens()` para las reglas. */
 export async function refillEnergyWithTokens(): Promise<RefillOutcome> {
   if (!isSupabaseConfigured()) return noRefillOutcome();
 

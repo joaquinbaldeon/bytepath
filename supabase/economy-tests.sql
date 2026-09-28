@@ -4,7 +4,7 @@
 -- Pegar ENTERO en el SQL Editor de Supabase y ejecutar, después de
 -- schema.sql, energy.sql, economy.sql y progress.sql.
 --
--- Los +15 tokens por completar una lección se prueban en progress-tests.sql
+-- Los +10 tokens por completar una lección se prueban en progress-tests.sql
 -- (los reparte `complete_lesson`). Aquí: la recarga con tokens y la seguridad
 -- de las tablas de tokens.
 --
@@ -48,62 +48,62 @@ begin
   delete from public.user_energy where user_id = v_user;
 
   ---------------------------------------------------------------------------
-  -- 1. Recarga con 60 y energía a 0 → quedan 10 tokens y 6/6
+  -- 1. Recarga con 110 y energía a 0 → quedan 10 tokens y 4/4
   ---------------------------------------------------------------------------
   v_n := 1;
-  insert into public.user_tokens (user_id, balance) values (v_user, 60);
+  insert into public.user_tokens (user_id, balance) values (v_user, 110);
   insert into public.user_energy (user_id, energy_remaining, last_regen_at) values (v_user, 0, now());
   v_out := public.refill_energy_with_tokens();
-  v_ok := (v_out ->> 'refilled')::boolean and (v_out ->> 'tokens')::int = 10 and (v_out ->> 'remaining')::int = 6;
+  v_ok := (v_out ->> 'refilled')::boolean and (v_out ->> 'tokens')::int = 10 and (v_out ->> 'remaining')::int = 4;
   insert into economy_test_results values
-    (v_n, 'Recargar con 60 deja 10 tokens y 6/6', case when v_ok then 'OK' else 'FALLO' end, v_out::text);
+    (v_n, 'Recargar con 110 deja 10 tokens y 4/4', case when v_ok then 'OK' else 'FALLO' end, v_out::text);
 
   ---------------------------------------------------------------------------
-  -- 2. Con 49 → rechazada, sin tocar nada
+  -- 2. Con 99 → rechazada, sin tocar nada
   ---------------------------------------------------------------------------
   v_n := 2;
-  update public.user_tokens set balance = 49 where user_id = v_user;
-  update public.user_energy set energy_remaining = 5, last_regen_at = now() where user_id = v_user;
+  update public.user_tokens set balance = 99 where user_id = v_user;
+  update public.user_energy set energy_remaining = 3, last_regen_at = now() where user_id = v_user;
   v_out := public.refill_energy_with_tokens();
   v_ok := (v_out ->> 'refilled')::boolean = false and (v_out ->> 'reason') = 'insufficient_tokens'
-      and (v_out ->> 'tokens')::int = 49 and (v_out ->> 'remaining')::int = 5;
+      and (v_out ->> 'tokens')::int = 99 and (v_out ->> 'remaining')::int = 3;
   insert into economy_test_results values
-    (v_n, 'Recargar con 49 se rechaza y no toca nada', case when v_ok then 'OK' else 'FALLO' end, v_out::text);
+    (v_n, 'Recargar con 99 se rechaza y no toca nada', case when v_ok then 'OK' else 'FALLO' end, v_out::text);
 
   ---------------------------------------------------------------------------
-  -- 3. Con 50 y 5/6 → 0 tokens y 6/6
+  -- 3. Con 100 y 3/4 → 0 tokens y 4/4
   ---------------------------------------------------------------------------
   v_n := 3;
-  update public.user_tokens set balance = 50 where user_id = v_user;
+  update public.user_tokens set balance = 100 where user_id = v_user;
   v_out := public.refill_energy_with_tokens();
-  v_ok := (v_out ->> 'refilled')::boolean and (v_out ->> 'tokens')::int = 0 and (v_out ->> 'remaining')::int = 6;
+  v_ok := (v_out ->> 'refilled')::boolean and (v_out ->> 'tokens')::int = 0 and (v_out ->> 'remaining')::int = 4;
   insert into economy_test_results values
-    (v_n, 'Recargar con 50 y 5/6 deja 0 tokens y 6/6', case when v_ok then 'OK' else 'FALLO' end, v_out::text);
+    (v_n, 'Recargar con 100 y 3/4 deja 0 tokens y 4/4', case when v_ok then 'OK' else 'FALLO' end, v_out::text);
 
   ---------------------------------------------------------------------------
-  -- 4. Con 50 y 6/6 → rechazada (ya está lleno), sin gastar
+  -- 4. Con 100 y 4/4 → rechazada (ya está lleno), sin gastar
   ---------------------------------------------------------------------------
   v_n := 4;
-  update public.user_tokens set balance = 50 where user_id = v_user;
+  update public.user_tokens set balance = 100 where user_id = v_user;
   v_out := public.refill_energy_with_tokens();
-  v_ok := (v_out ->> 'refilled')::boolean = false and (v_out ->> 'reason') = 'energy_full' and (v_out ->> 'tokens')::int = 50;
+  v_ok := (v_out ->> 'refilled')::boolean = false and (v_out ->> 'reason') = 'energy_full' and (v_out ->> 'tokens')::int = 100;
   insert into economy_test_results values
-    (v_n, 'Recargar con 6/6 se rechaza sin gastar tokens', case when v_ok then 'OK' else 'FALLO' end, v_out::text);
+    (v_n, 'Recargar con 4/4 se rechaza sin gastar tokens', case when v_ok then 'OK' else 'FALLO' end, v_out::text);
 
   v_n := 5;
-  select exists (select 1 from public.token_transactions where user_id = v_user and type = 'energy_refill' and amount = -50)
+  select exists (select 1 from public.token_transactions where user_id = v_user and type = 'energy_refill' and amount = -100)
     into v_ok;
   insert into economy_test_results values
-    (v_n, 'La recarga queda anotada como energy_refill de -50', case when v_ok then 'OK' else 'FALLO' end, '');
+    (v_n, 'La recarga queda anotada como energy_refill de -100', case when v_ok then 'OK' else 'FALLO' end, '');
 
   ---------------------------------------------------------------------------
   -- 6. Una regeneración pendiente cuenta antes de decidir si "ya está lleno"
-  --    (0 + 9h = 3, no 6: la recarga sí procede)
+  --    (0 + 3h = 1, no 4: la recarga sí procede)
   ---------------------------------------------------------------------------
   v_n := 6;
-  update public.user_energy set energy_remaining = 0, last_regen_at = now() - interval '9 hours' where user_id = v_user;
+  update public.user_energy set energy_remaining = 0, last_regen_at = now() - interval '3 hours' where user_id = v_user;
   v_out := public.refill_energy_with_tokens();
-  v_ok := (v_out ->> 'refilled')::boolean and (v_out ->> 'remaining')::int = 6 and (v_out ->> 'tokens')::int = 0;
+  v_ok := (v_out ->> 'refilled')::boolean and (v_out ->> 'remaining')::int = 4 and (v_out ->> 'tokens')::int = 0;
   insert into economy_test_results values
     (v_n, 'La regeneración pendiente se cuenta antes de recargar', case when v_ok then 'OK' else 'FALLO' end, v_out::text);
 
@@ -169,7 +169,7 @@ begin
   begin
     set local role authenticated;
     insert into public.token_transactions (user_id, amount, type, course_slug, lesson_slug)
-    values (v_user, 15, 'lesson_completion', 'x', 'y');
+    values (v_user, 10, 'lesson_completion', 'x', 'y');
     reset role;
     v_ok := false; v_detail := 'Un usuario pudo escribir en el ledger';
   exception when insufficient_privilege then
@@ -186,10 +186,10 @@ begin
   -- La garantía de "una vez por lección" es el índice, no una comprobación.
   v_n := 15;
   insert into public.token_transactions (user_id, amount, type, course_slug, lesson_slug)
-  values (v_user, 15, 'lesson_completion', '__eco__', 'l1');
+  values (v_user, 10, 'lesson_completion', '__eco__', 'l1');
   begin
     insert into public.token_transactions (user_id, amount, type, course_slug, lesson_slug)
-    values (v_user, 15, 'lesson_completion', '__eco__', 'l1');
+    values (v_user, 10, 'lesson_completion', '__eco__', 'l1');
     v_ok := false; v_detail := 'El índice único no impidió el duplicado';
   exception when unique_violation then
     v_ok := true; v_detail := 'Rechazado por el índice único parcial';
@@ -198,7 +198,7 @@ begin
 
   v_n := 16;
   begin
-    insert into public.token_transactions (user_id, amount, type) values (v_user, 15, 'lesson_completion');
+    insert into public.token_transactions (user_id, amount, type) values (v_user, 10, 'lesson_completion');
     v_ok := false; v_detail := 'Aceptó una recompensa sin lección';
   exception when check_violation then
     v_ok := true; v_detail := 'Rechazada por el CHECK de coherencia';

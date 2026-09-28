@@ -5,7 +5,7 @@ import { useState } from "react";
 import { FREE_MAX_ENERGY } from "@/lib/energy/config";
 import { patchAccountState } from "@/lib/energy/store";
 import { useCountdown } from "@/lib/energy/useCountdown";
-import { ENERGY_REFILL_COST } from "@/lib/tokens/config";
+import { ENERGY_REFILL_COST, LESSON_COMPLETION_REWARD } from "@/lib/tokens/config";
 import { refillEnergyAction } from "@/lib/tokens/actions";
 
 /**
@@ -20,11 +20,13 @@ import { refillEnergyAction } from "@/lib/tokens/actions";
 export function EconomyCard({
   isPremium,
   initialRemaining,
+  initialLimit,
   initialTokens,
   initialNextEnergyAt,
 }: {
   isPremium: boolean;
   initialRemaining: number | null;
+  initialLimit: number | null;
   initialTokens: number | null;
   initialNextEnergyAt: string | null;
 }) {
@@ -34,9 +36,12 @@ export function EconomyCard({
   const [refilling, setRefilling] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
+  // El tope real lo da el servidor (`get_account_state`); `FREE_MAX_ENERGY`
+  // es solo el respaldo mientras no hay dato, igual que en EnergyMeter.
+  const limit = initialLimit ?? FREE_MAX_ENERGY;
   const countdown = useCountdown(isPremium ? null : nextEnergyAt);
   const canRefill = !isPremium && tokens !== null && tokens >= ENERGY_REFILL_COST;
-  const isFull = !isPremium && remaining !== null && remaining >= FREE_MAX_ENERGY;
+  const isFull = !isPremium && remaining !== null && remaining >= limit;
 
   async function handleRefill() {
     setRefilling(true);
@@ -87,7 +92,7 @@ export function EconomyCard({
                 <span className="font-display text-3xl font-semibold tabular-nums">
                   {remaining ?? 0}
                 </span>
-                <span className="text-dense text-fg-muted">de {FREE_MAX_ENERGY}</span>
+                <span className="text-dense text-fg-muted">de {limit}</span>
               </p>
               <p className="mt-1 text-dense text-fg-muted">
                 {isFull ? "Al máximo." : countdown ? `+1 en ${countdown}.` : "Se regenera sola."}
@@ -103,7 +108,7 @@ export function EconomyCard({
             Tokens
           </p>
           <p className="mt-2 font-display text-3xl font-semibold tabular-nums">{tokens ?? 0}</p>
-          <p className="mt-1 text-dense text-fg-muted">+15 por cada lección que completas.</p>
+          <p className="mt-1 text-dense text-fg-muted">+{LESSON_COMPLETION_REWARD} por cada lección que completas.</p>
         </div>
       </div>
 
