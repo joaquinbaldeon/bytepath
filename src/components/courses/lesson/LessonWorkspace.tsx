@@ -4,6 +4,8 @@ import { type ReactNode, useEffect, useState } from "react";
 import { ChallengeWorkspace } from "@/components/courses/challenge/ChallengeWorkspace";
 import { CompletionStatus } from "@/components/courses/lesson/CompletionStatus";
 import { LessonContinueBar, type ContinueMode } from "@/components/courses/lesson/LessonContinueBar";
+import { lessonFrame } from "@/components/courses/lesson/frame";
+import { lessonSteps } from "@/components/courses/lesson/LessonSteps";
 import { QuizModal } from "@/components/courses/lesson/QuizModal";
 import { QuizPanel } from "@/components/courses/lesson/QuizPanel";
 import {
@@ -115,6 +117,15 @@ export function LessonWorkspace({
   const challengeDone = challenge === null || progress.challengePassed;
   const ready = quizDone && challengeDone && !completed;
 
+  const steps = lessonSteps({
+    hasQuiz: quiz !== null,
+    hasChallenge: challenge !== null,
+    theoryDone: stage === "challenge" || progress.quizStatus !== "not_started" || progress.challengePassed,
+    quizDone: quiz !== null && progress.quizStatus === "completed",
+    challengeDone: challenge !== null && progress.challengePassed,
+    completed,
+  });
+
   function handleQuizProgress(snapshot: QuizSnapshot) {
     // Un repaso del quiz de una lección ya completada, o de un quiz ya
     // superado, no debe reabrir nada (el servidor también lo rechaza).
@@ -186,6 +197,7 @@ export function LessonWorkspace({
         next={next}
         completion={completion}
         ready={ready}
+        steps={steps}
         onPassed={handleChallengePassed}
         onBackToTheory={() => setStage("learn")}
       />
@@ -209,18 +221,23 @@ export function LessonWorkspace({
   const resuming = progress.quizStatus === "in_progress" && progress.snapshot !== null;
   const showStatus = !completed && (ready || completion.problem !== null);
 
+  // `@container`: el reparto en columnas de la teoría, la cabecera y la barra se
+  // decide por el ancho de ESTA área (lo que queda tras el índice), no por el de
+  // la ventana. `min-w-0` + `overflow-x-clip`: un ejemplo de código ancho no puede
+  // ensanchar la columna del grid ni provocar scroll horizontal en la página.
   return (
-    <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col bg-surface">
+    <div className="@container flex min-h-[calc(100dvh-3.5rem)] min-w-0 flex-col overflow-x-clip bg-surface">
       <div className="flex-1">{theory}</div>
 
       {showStatus && (
-        <div className="mx-auto w-full max-w-2xl px-5 pb-5 sm:px-8">
+        <div className={`${lessonFrame} pb-6`}>
           <CompletionStatus completion={completion} ready={ready} />
         </div>
       )}
 
       <LessonContinueBar
         mode={mode}
+        steps={steps}
         completion={completion}
         coursePath={coursePath}
         next={next && { title: next.title, href: next.href }}

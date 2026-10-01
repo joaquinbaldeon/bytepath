@@ -1,8 +1,9 @@
 "use client";
 
-import { DatabaseZap, Lock, Map as MapIcon } from "lucide-react";
+import { ArrowRight, DatabaseZap, Lock, Map as MapIcon } from "lucide-react";
 import Link from "next/link";
 import { SignInToPractice } from "@/components/energy/SignInToPractice";
+import { actionClass } from "@/components/ui/actions";
 
 export type LessonGateProps =
   | { status: "signin"; coursePath: string }
@@ -57,25 +58,21 @@ function LockedCard({
       </span>
 
       <h2 className="mt-5 font-display text-xl font-semibold tracking-tight">
-        Esta lección todavía está bloqueada
+        Esta lección todavía no toca
       </h2>
       <p className="mt-2.5 text-body text-fg-muted">
-        Completa antes «{prerequisite.title}» y se desbloqueará sola.
+        Se abre en cuanto completes «{prerequisite.title}». Vamos por orden: cada lección se apoya
+        en la anterior.
       </p>
 
       <div className="mt-6 flex flex-col gap-2.5">
-        <Link
-          href={coursePath}
-          className="focus-ring inline-flex h-11 items-center justify-center gap-2 rounded-control bg-brand-500 font-medium text-white transition-colors hover:bg-brand-600"
-        >
+        <Link href={prerequisite.href} className={actionClass("primary")}>
+          <span className="truncate">Ir a «{prerequisite.title}»</span>
+          <ArrowRight aria-hidden className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+        <Link href={coursePath} className={actionClass("secondary")}>
           <MapIcon aria-hidden className="size-4" />
           Volver al camino
-        </Link>
-        <Link
-          href={prerequisite.href}
-          className="focus-ring inline-flex h-11 items-center justify-center rounded-control border border-line font-medium transition-colors hover:bg-surface-2"
-        >
-          Ir a «{prerequisite.title}»
         </Link>
       </div>
     </div>

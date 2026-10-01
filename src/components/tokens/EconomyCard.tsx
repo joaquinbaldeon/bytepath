@@ -57,7 +57,7 @@ export function EconomyCard({
           tokens: outcome.tokens,
           nextEnergyAt: outcome.nextEnergyAt,
         });
-        setNotice("Energía recargada al máximo.");
+        setNotice("¡Listo! Energía a tope ⚡");
       } else {
         if (outcome.tokens !== null) {
           setTokens(outcome.tokens);
@@ -65,8 +65,8 @@ export function EconomyCard({
         }
         setNotice(
           outcome.reason === "energy_full"
-            ? "Ya tienes la energía al máximo."
-            : "No tienes tokens suficientes todavía.",
+            ? "Tu energía ya está a tope: no hace falta gastar tokens."
+            : "Todavía no tienes tokens suficientes. Completa lecciones para ganar más.",
         );
       }
     } finally {
@@ -95,7 +95,11 @@ export function EconomyCard({
                 <span className="text-dense text-fg-muted">de {limit}</span>
               </p>
               <p className="mt-1 text-dense text-fg-muted">
-                {isFull ? "Al máximo." : countdown ? `+1 en ${countdown}.` : "Se regenera sola."}
+                {isFull
+                  ? "A tope. Cada lección completada gasta 1."
+                  : countdown
+                    ? `+1 en ${countdown}. Se regenera sola, hasta ${limit}.`
+                    : `Se regenera sola, hasta ${limit}.`}
               </p>
             </>
           )}
@@ -108,7 +112,11 @@ export function EconomyCard({
             Tokens
           </p>
           <p className="mt-2 font-display text-3xl font-semibold tabular-nums">{tokens ?? 0}</p>
-          <p className="mt-1 text-dense text-fg-muted">+{LESSON_COMPLETION_REWARD} por cada lección que completas.</p>
+          <p className="mt-1 text-dense text-fg-muted">
+            {isPremium
+              ? `+${LESSON_COMPLETION_REWARD} por cada lección que completas.`
+              : `+${LESSON_COMPLETION_REWARD} por lección. Con ${ENERGY_REFILL_COST} llenas la energía sin esperar.`}
+          </p>
         </div>
       </div>
 
@@ -119,18 +127,22 @@ export function EconomyCard({
             onClick={handleRefill}
             disabled={!canRefill || isFull || refilling}
             aria-busy={refilling}
-            className="focus-ring inline-flex h-11 items-center gap-2 rounded-control bg-energy px-5 font-medium text-ink transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-subtle"
+            className="focus-ring bp-press inline-flex h-11 items-center gap-2 rounded-control bg-energy px-5 font-medium text-ink transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-subtle"
           >
             {refilling ? (
               <Loader2 aria-hidden className="size-4 animate-spin" />
             ) : (
               <Zap aria-hidden className="size-4 fill-current" />
             )}
-            {isFull
-              ? "Energía al máximo"
-              : canRefill
-                ? `Recargar energía · ${ENERGY_REFILL_COST} 🪙`
-                : `Necesitas ${Math.max(0, ENERGY_REFILL_COST - (tokens ?? 0))} 🪙 más`}
+            {isFull ? "Energía a tope" : "Llenar la energía"}
+            {!isFull && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-black/10 px-1.5 py-0.5 font-mono text-label tabular-nums">
+                <Coins aria-hidden className="size-3" />
+                {canRefill
+                  ? ENERGY_REFILL_COST
+                  : `faltan ${Math.max(0, ENERGY_REFILL_COST - (tokens ?? 0))}`}
+              </span>
+            )}
           </button>
 
           {notice && (

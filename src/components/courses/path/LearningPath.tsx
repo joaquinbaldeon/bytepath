@@ -3,6 +3,7 @@
 import { BookOpen, Code2, Flag, Lock, Play, Zap } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
+import { curve, layoutPath, type LaidPoint, PATH_METRICS } from "@/lib/courses/pathLayout";
 import type { PathLesson, PathModule } from "@/lib/courses/path";
 import { useLiveAccount } from "@/lib/energy/store";
 import { useCountdown } from "@/lib/energy/useCountdown";
@@ -16,17 +17,19 @@ import { routes } from "@/lib/site";
  * caja, sin borde y sin relleno propio. Lo único que lo acompaña es la cuadrícula
  * de puntos ultra tenue del fondo de la sección (`bp-page-grid`).
  *
- * La identidad es la de un problema de concurso más que la de una lista con
- * círculos: el camino es una TRAZA —como la de un circuito o la de un grafo—
- * que baja por la izquierda con quiebros a 45°, y cada lección es un nodo de esa
- * traza. Cada sector (módulo) abre con una cabecera tipo HUD (sector, aciertos,
- * duración) y lo completado se marca como lo marca un juez: `AC`.
+ * Es UN solo camino continuo que serpentea de arriba abajo: empieza en la
+ * cabecera del primer módulo, pasa por cada lección y por la cabecera de cada
+ * módulo siguiente (que es un empalme del mismo camino), y llega a la última.
+ * DÓNDE está cada punto lo decide `lib/courses/pathLayout.ts` a partir de la
+ * estructura del curso (un paseo con semilla: estable, sin fórmula a la vista,
+ * válido para cualquier número de lecciones). Cuánto serpentea según el ancho lo
+ * decide el CSS (`.bp-route*` en globals.css), no este componente.
  *
- * Los nodos no son todos el mismo botón. Su FORMA dice qué es:
+ * La identidad sigue siendo la de un problema de concurso: lo completado se
+ * marca como lo marca un juez, `AC`, y los nodos tienen FORMA según qué son:
  *   · cuadrado con pines   →  teoría (un chip en el bus)
- *   · octógono             →  lección con desafío de código (esquinas cortadas
- *                             a 45°, el mismo ángulo que la traza)
- *   · rombo doble          →  checkpoint: el repaso que cierra un sector
+ *   · octógono             →  lección con desafío de código
+ *   · rombo doble          →  checkpoint: el repaso que cierra un módulo
  * y su TAMAÑO y RELLENO dicen en qué estado está: la siguiente es la más grande
  * y pulsa; la completada es sólida con `AC`; la bloqueada es pequeña, hueca y
  * discontinua; la que espera energía es ámbar.
@@ -42,31 +45,7 @@ import { routes } from "@/lib/site";
  * nunca impide ABRIR una lección: solo el último paso, completarla.
  */
 
-/* --------------------------------- Geometría -------------------------------- */
-/* Todo en píxeles reales: la traza y los nodos comparten un sistema de           */
-/* coordenadas, así que los quiebros son de 45° de verdad y no se deforman.        */
-
-const ROW = 92;
-const HEAD = 136;
-const RAIL = 88;
-const CX = 44;
-const JOG = 20;
-
-/** Desplazamiento lateral del nodo `i` de un sector de `n`: entra y sale recto, y en medio serpentea. */
-function offsetOf(index: number, count: number): number {
-  if (index === 0 || index === count - 1) return 0;
-  return [JOG, 0, -JOG, 0][(index - 1) % 4];
-}
-
-const nodeY = (index: number) => HEAD + index * ROW + ROW / 2;
-
-/** Traza con quiebro a 45° entre dos nodos: recto, diagonal, recto. */
-function link(x0: number, y0: number, x1: number, y1: number): string {
-  const dx = Math.abs(x1 - x0);
-  if (dx === 0) return `M ${x0} ${y0} L ${x1} ${y1}`;
-  const a = (y1 - y0 - dx) / 2;
-  return `M ${x0} ${y0} L ${x0} ${y0 + a} L ${x1} ${y0 + a + dx} L ${x1} ${y1}`;
-}
+const { head: HEAD, row: ROW, junctionY: JUNCTION_Y } = PATH_METRICS;
 
 type Tone = "done" | "active" | "todo";
 
@@ -123,14 +102,22 @@ const shapeStyle: Record<Visual, string> = {
   locked: "fill-transparent stroke-line [stroke-dasharray:3_4]",
 };
 
-/** Dibujo de cada forma en una caja de 56×56: pines, esquinas cortadas, doble rombo. */
+/**
+ * Dibujo de cada forma en una caja de 56×56: pines, esquinas cortadas, doble
+ * rombo. Detrás de cada una va una PLACA del color del fondo con su mismo
+ * contorno: el camino pasa por debajo y termina en el nodo en vez de verse a
+ * través de los nodos huecos (el bloqueado, el disponible), que es lo que hace
+ * que el nodo parezca parte del camino y no un icono puesto encima.
+ */
 function Shape({ shape, visual }: { shape: "chip" | "octagon" | "checkpoint"; visual: Visual }) {
   const common = `${shapeStyle[visual]} stroke-[2]`;
+  const plate = "fill-canvas stroke-none";
 
   return (
     <svg aria-hidden viewBox="0 0 56 56" className="absolute inset-0 size-full overflow-visible">
       {shape === "chip" && (
         <>
+          <rect x="9" y="9" width="38" height="38" rx="8" className={plate} />
           <rect x="9" y="9" width="38" height="38" rx="8" className={common} />
           <path
             d="M2 22h7M2 34h7M47 22h7M47 34h7"
@@ -141,10 +128,14 @@ function Shape({ shape, visual }: { shape: "chip" | "octagon" | "checkpoint"; vi
         </>
       )}
       {shape === "octagon" && (
-        <path d="M19 5H37L51 19V37L37 51H19L5 37V19Z" strokeLinejoin="round" className={common} />
+        <>
+          <path d="M19 5H37L51 19V37L37 51H19L5 37V19Z" className={plate} />
+          <path d="M19 5H37L51 19V37L37 51H19L5 37V19Z" strokeLinejoin="round" className={common} />
+        </>
       )}
       {shape === "checkpoint" && (
         <>
+          <path d="M28 2 54 28 28 54 2 28Z" className={plate} />
           <path d="M28 2 54 28 28 54 2 28Z" strokeLinejoin="round" className={common} />
           <path
             d="M28 12 44 28 28 44 12 28Z"
@@ -318,15 +309,20 @@ const stateText: Record<Visual, string> = {
   locked: "Bloqueada.",
 };
 
-function Node({ lesson, visual, x }: { lesson: PathLesson; visual: Visual; x: number }) {
+/* ------------------------------ Nodos y lecciones ---------------------------- */
+
+/** Variable `--o` de un punto: lo único que el CSS necesita para colocarlo. */
+const offsetVar = (point: LaidPoint) => ({ "--o": point.o }) as CSSProperties;
+
+function Node({ lesson, visual, point }: { lesson: PathLesson; visual: Visual; point: LaidPoint }) {
   const size = nodeSize[visual] + (lesson.kind === "quiz" ? 6 : 0);
   const shape = shapeOf(lesson);
 
   return (
     <span
       aria-hidden
-      className="bp-node-in absolute top-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
-      style={{ left: x, width: size, height: size }}
+      className="bp-node bp-node-in absolute top-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
+      style={{ ...offsetVar(point), width: size, height: size }}
     >
       {visual === "next" && <Beacon tone="brand" />}
       {visual === "energy" && <Beacon tone="energy" />}
@@ -343,14 +339,12 @@ function Node({ lesson, visual, x }: { lesson: PathLesson; visual: Visual; x: nu
 function Row({
   lesson,
   index,
-  count,
-  moduleNumber,
+  point,
   context,
 }: {
   lesson: PathLesson;
   index: number;
-  count: number;
-  moduleNumber: number;
+  point: LaidPoint;
   context: Context;
 }) {
   const visual = visualOf(lesson, context);
@@ -362,14 +356,11 @@ function Row({
   const body = (
     <>
       <span className="sr-only">{stateText[visual]}</span>
-      <Node lesson={lesson} visual={visual} x={CX + offsetOf(index, count)} />
+      <Node lesson={lesson} visual={visual} point={point} />
 
-      <span
-        className="absolute inset-y-0 right-3 flex items-center gap-4 sm:right-4"
-        style={{ left: RAIL + 6 }}
-      >
-        <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
-          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10.5px] tracking-[0.12em] text-fg-subtle uppercase">
+      <span className="bp-label inset-y-0" data-side={point.side} style={offsetVar(point)}>
+        <span className="flex min-w-0 max-w-[24rem] flex-col gap-[3px]">
+          <span className="bp-label-row flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10.5px] tracking-[0.12em] text-fg-subtle uppercase">
             <span className={`rounded px-1.5 py-[2px] font-semibold ${chipClass}`}>{chip}</span>
             <span>
               {kindLabels[lesson.kind]}
@@ -377,6 +368,8 @@ function Row({
                 <span className="text-compete-ink"> · Desafío</span>
               )}
               {lesson.inPreparation && <span className="text-fg-muted"> · En preparación</span>}
+              {/* Los minutos solo caben cuando hay ancho: en móvil partirían la fila. */}
+              <span className="hidden text-fg-subtle tabular-nums @2xl:inline"> · {lesson.minutes} min</span>
             </span>
           </span>
           <span
@@ -390,34 +383,24 @@ function Row({
           >
             {lesson.title}
           </span>
-          <span className={`text-label leading-4 ${detailClass}`}>{detail}</span>
-        </span>
-
-        {/* Coordenada del nodo (sector · nodo) y duración: dato de HUD, solo donde cabe. */}
-        <span className="hidden shrink-0 flex-col items-end gap-0.5 font-mono text-[10.5px] tracking-wider text-fg-subtle tabular-nums sm:flex">
-          <span>
-            {String(moduleNumber).padStart(2, "0")}.{String(index + 1).padStart(2, "0")}
-          </span>
-          <span>{lesson.minutes} min</span>
+          <span className={`line-clamp-1 text-label leading-4 @lg:line-clamp-2 ${detailClass}`}>{detail}</span>
         </span>
       </span>
     </>
   );
 
   const rowClass =
-    "absolute inset-x-0 rounded-xl transition-colors " +
-    (interactive
-      ? "focus-ring-tight hover:bg-fg/[0.035]"
-      : "cursor-default");
+    "absolute inset-0 rounded-xl transition-colors " +
+    (interactive ? "focus-ring-tight hover:bg-fg/[0.035]" : "cursor-default");
 
   return (
     <li className="absolute inset-x-0" style={{ top: HEAD + index * ROW, height: ROW }}>
       {interactive ? (
-        <Link href={href} className={`${rowClass} inset-y-0`}>
+        <Link href={href} className={rowClass}>
           {body}
         </Link>
       ) : (
-        <div aria-disabled="true" className={`${rowClass} inset-y-0`}>
+        <div aria-disabled="true" className={rowClass}>
           {body}
         </div>
       )}
@@ -425,7 +408,7 @@ function Row({
   );
 }
 
-/* ------------------------------- Traza (bus) ------------------------------- */
+/* ------------------------------- Traza (camino) ------------------------------ */
 
 const strokeByTone: Record<Tone, string> = {
   done: "stroke-practice",
@@ -433,148 +416,193 @@ const strokeByTone: Record<Tone, string> = {
   todo: "stroke-line",
 };
 
-function Trace({
-  module,
-  lead,
-  tail,
-}: {
-  module: PathModule;
-  /** Tono del tramo que entra al sector (desde el nodo anterior o desde arriba). */
-  lead: Tone;
-  /** Tono del tramo que sale hacia el siguiente sector; `null` en el último. */
-  tail: Tone | null;
-}) {
-  const count = module.lessons.length;
-  const total = HEAD + count * ROW;
+type Segment = { d: string; tone: Tone };
 
-  const segments: { d: string; tone: Tone }[] = [];
-  segments.push({ d: `M ${CX} 0 L ${CX} ${nodeY(0)}`, tone: lead });
+/**
+ * Los tramos del camino, en orden: cada uno va de un punto al siguiente (de la
+ * cabecera de un módulo a su primera lección, de una lección a la siguiente, de
+ * la última de un módulo a la cabecera del que viene). Su tono sale de las dos
+ * lecciones que une, igual que antes: hecho entre dos completadas, activo entre
+ * la última completada y la que toca, y "por hacer" en el resto.
+ */
+function buildSegments(
+  modules: PathModule[],
+  points: LaidPoint[],
+): { segments: Segment[]; junctionTone: Tone[] } {
+  const segments: Segment[] = [];
+  const junctionTone: Tone[] = [];
+  let cursor = 0;
+  let previous: PathLesson | null = null;
 
-  for (let i = 1; i < count; i++) {
-    segments.push({
-      d: link(CX + offsetOf(i - 1, count), nodeY(i - 1), CX + offsetOf(i, count), nodeY(i)),
-      tone: toneBetween(module.lessons[i - 1], module.lessons[i]),
+  modules.forEach((module) => {
+    const junction = points[cursor];
+    const beforeJunction = cursor > 0 ? points[cursor - 1] : null;
+    cursor += 1;
+    const first = module.lessons[0];
+
+    // El tono que entra al empalme (y sale de él hacia la primera lección).
+    const tone: Tone = previous
+      ? first
+        ? toneBetween(previous, first)
+        : "todo"
+      : first?.state === "completed"
+        ? "done"
+        : first?.isCurrent
+          ? "active"
+          : "todo";
+    junctionTone.push(tone);
+
+    if (beforeJunction) segments.push({ d: curve(beforeJunction, junction), tone });
+
+    let from = junction;
+    module.lessons.forEach((lesson, index) => {
+      const point = points[cursor];
+      cursor += 1;
+      const segmentTone = index === 0 ? tone : toneBetween(module.lessons[index - 1], lesson);
+      segments.push({ d: curve(from, point), tone: segmentTone });
+      from = point;
+      previous = lesson;
     });
-  }
-  if (tail) {
-    segments.push({ d: `M ${CX} ${nodeY(count - 1)} L ${CX} ${total}`, tone: tail });
-  }
+  });
 
-  const active = segments.find((segment) => segment.tone === "active");
+  return { segments, junctionTone };
+}
+
+/**
+ * El SVG del camino. Su viewBox va de -1 a 1 en horizontal (la posición `o` de
+ * cada punto) y en píxeles reales en vertical, y `.bp-trace` lo coloca y
+ * dimensiona con las mismas variables CSS que los nodos: a cualquier ancho la
+ * curva pasa por el centro de cada nodo. Se estira solo en horizontal
+ * (`preserveAspectRatio="none"`); el grosor y el punteado no se deforman
+ * (`non-scaling-stroke`).
+ */
+function Trace({ segments, height }: { segments: Segment[]; height: number }) {
+  const stroke = {
+    fill: "none",
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    vectorEffect: "non-scaling-stroke" as const,
+  };
+  const svg = {
+    "aria-hidden": true,
+    viewBox: `-1 0 2 ${height}`,
+    preserveAspectRatio: "none" as const,
+    width: "100%",
+    height,
+    style: { display: "block", overflow: "visible" } as CSSProperties,
+  };
+
+  const done = segments.filter((segment) => segment.tone === "done");
+  const rest = segments.filter((segment) => segment.tone !== "done");
 
   return (
-    <>
-      <svg
-        aria-hidden
-        className="pointer-events-none absolute top-0 left-0 overflow-visible"
-        width={RAIL}
-        height={total}
-        viewBox={`0 0 ${RAIL} ${total}`}
-      >
-        {segments.map((segment, i) =>
-          segment.tone === "done" ? (
+    <div className="bp-trace" style={{ height }}>
+      {/* Lo ya recorrido, con un halo verde tenue debajo; se revela de arriba abajo. */}
+      <div className="bp-trace-reveal absolute inset-0">
+        <svg {...svg}>
+          {done.map((segment, i) => (
             <g key={i}>
-              <path d={segment.d} className="fill-none stroke-practice/20" strokeWidth="7" strokeLinecap="round" />
-              <path
-                d={segment.d}
-                pathLength={1}
-                className={`bp-trace-draw fill-none ${strokeByTone.done}`}
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <path d={segment.d} className="stroke-practice/20" strokeWidth={7} {...stroke} />
+              <path d={segment.d} className={strokeByTone.done} strokeWidth={2.5} {...stroke} />
             </g>
-          ) : (
-            <path
-              key={i}
-              d={segment.d}
-              className={`fill-none ${strokeByTone[segment.tone]} ${
-                segment.tone === "active" ? "bp-path-flow" : ""
-              }`}
-              strokeWidth={segment.tone === "active" ? 2.5 : 2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeDasharray={segment.tone === "active" ? "6 6" : "1 7"}
-            />
-          ),
-        )}
+          ))}
+        </svg>
+      </div>
 
-        {/* Vía: el punto donde la traza cruza la cabecera del sector. */}
-        <circle
-          cx={CX}
-          cy={HEAD * 0.34}
-          r="4.5"
-          className={`fill-canvas ${strokeByTone[lead]}`}
-          strokeWidth="2"
-        />
+      <svg {...svg} className="absolute inset-0">
+        {rest.map((segment, i) => (
+          <path
+            key={i}
+            d={segment.d}
+            className={`${strokeByTone[segment.tone]} ${segment.tone === "active" ? "bp-path-flow" : ""}`}
+            strokeWidth={segment.tone === "active" ? 2.5 : 2}
+            strokeDasharray={segment.tone === "active" ? "6 6" : "1 7"}
+            {...stroke}
+          />
+        ))}
       </svg>
-
-      {/* Señal que viaja por el tramo activo, del nodo hecho al que toca. */}
-      {active && (
-        <span
-          aria-hidden
-          className="bp-signal absolute top-0 left-0 size-[7px] rounded-full bg-brand-400 shadow-[0_0_10px_2px_rgb(141_129_248_/_0.7)]"
-          style={{ offsetPath: `path("${active.d}")`, offsetRotate: "0deg" }}
-        />
-      )}
-    </>
+    </div>
   );
 }
 
-/* ------------------------------ Cabecera de sector ------------------------------ */
+/* ------------------------------ Cabecera de módulo ----------------------------- */
 
-function SectorHeader({ module }: { module: PathModule }) {
+/**
+ * La cabecera de un módulo es un EMPALME del camino: un anillo por el que pasa
+ * la traza, con el título al lado. Va del lado con sitio (el mismo criterio que
+ * el texto de las lecciones), así que no tapa el camino ni se sale de pantalla.
+ */
+function SectorHeader({ module, point, tone }: { module: PathModule; point: LaidPoint; tone: Tone }) {
   const done = module.completed === module.total;
 
   return (
-    <div
-      className="absolute inset-x-0 top-0 flex flex-col justify-center pr-3 sm:pr-4"
-      style={{ height: HEAD, paddingLeft: RAIL + 6 }}
-    >
-      <div className="flex items-center gap-3 font-mono text-[10.5px] tracking-[0.18em] uppercase">
-        <span className="font-semibold text-fg-muted">
-          Sector {String(module.number).padStart(2, "0")}
-        </span>
-        <span aria-hidden className="h-px flex-1 bg-line" />
-        <span className={`tabular-nums ${done ? "font-semibold text-practice-ink" : "text-fg-subtle"}`}>
-          {done ? "Superado" : `${String(module.completed).padStart(2, "0")}/${String(module.total).padStart(2, "0")} AC`}
-        </span>
-      </div>
+    <>
+      <span
+        aria-hidden
+        className={`bp-node absolute z-10 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-canvas ${
+          tone === "done"
+            ? "border-practice"
+            : tone === "active"
+              ? "border-brand-500"
+              : "border-fg-subtle/60"
+        }`}
+        style={{ ...offsetVar(point), top: JUNCTION_Y }}
+      />
 
-      <h3 className="mt-1.5 font-display text-xl leading-tight font-semibold tracking-tight text-balance sm:text-2xl">
-        {module.title}
-      </h3>
-      {module.summary && (
-        <p className="mt-1 line-clamp-2 max-w-xl text-dense leading-5 text-fg-muted">{module.summary}</p>
-      )}
+      <div
+        className="bp-label top-0 items-start pt-5"
+        data-side={point.side}
+        style={{ ...offsetVar(point), height: HEAD }}
+      >
+        <div className="flex w-full max-w-[26rem] min-w-0 flex-col">
+          <div className="bp-label-row flex items-center gap-3 font-mono text-[10.5px] tracking-[0.18em] uppercase">
+            <span className="font-semibold text-fg-muted">
+              Módulo {String(module.number).padStart(2, "0")}
+            </span>
+            <span aria-hidden className="h-px flex-1 bg-line" />
+            <span className={`tabular-nums ${done ? "font-semibold text-practice-ink" : "text-fg-subtle"}`}>
+              {done
+                ? "Superado"
+                : `${String(module.completed).padStart(2, "0")}/${String(module.total).padStart(2, "0")} AC`}
+            </span>
+          </div>
 
-      <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10.5px] tracking-wider text-fg-subtle uppercase">
-        <span
-          role="img"
-          aria-label={`${module.completed} de ${module.total} lecciones completadas`}
-          className="inline-flex items-center gap-[3px]"
-        >
-          {module.lessons.map((lesson) => (
+          <h3 className="mt-1.5 font-display text-xl leading-tight font-semibold tracking-tight text-balance sm:text-2xl">
+            {module.title}
+          </h3>
+          {module.summary && (
+            <p className="mt-1 line-clamp-1 text-dense leading-5 text-fg-muted @lg:line-clamp-2">{module.summary}</p>
+          )}
+
+          <p className="bp-label-row mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10.5px] tracking-wider text-fg-subtle uppercase">
             <span
-              key={lesson.slug}
-              className={`h-1 w-3.5 rounded-full ${
-                lesson.state === "completed"
-                  ? "bg-practice"
-                  : lesson.state === "in_progress"
-                    ? "bg-brand-500"
-                    : "bg-line"
-              }`}
-            />
-          ))}
-        </span>
-        <span className="tabular-nums">{module.minutes} min</span>
-        {module.challenges > 0 && (
-          <span className="text-compete-ink tabular-nums">
-            {module.challenges} {module.challenges === 1 ? "desafío" : "desafíos"}
-          </span>
-        )}
-      </p>
-    </div>
+              role="img"
+              aria-label={`${module.completed} de ${module.total} lecciones completadas`}
+              className="inline-flex items-center gap-[3px]"
+            >
+              {module.lessons.map((lesson) => (
+                <span
+                  key={lesson.slug}
+                  className={`h-1 w-3.5 rounded-full ${
+                    lesson.state === "completed"
+                      ? "bg-practice"
+                      : lesson.state === "in_progress"
+                        ? "bg-brand-500"
+                        : "bg-line"
+                  }`}
+                />
+              ))}
+            </span>
+            <span className="tabular-nums">{module.minutes} min</span>
+            {module.challenges > 0 && (
+              <span className="text-compete-ink tabular-nums">
+                {module.challenges} {module.challenges === 1 ? "desafío" : "desafíos"}
+              </span>
+            )}
+          </p>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -593,53 +621,42 @@ export function LearningPath({
 
   const context: Context = {
     needsLogin: live.metered && !live.signedIn,
-    outOfEnergy:
-      live.metered && live.signedIn && !live.isPremium && (live.remaining ?? 1) <= 0,
+    outOfEnergy: live.metered && live.signedIn && !live.isPremium && (live.remaining ?? 1) <= 0,
     isPremium: live.isPremium,
     countdown,
   };
 
+  // La forma del camino sale SOLO de la estructura del curso: no depende del
+  // progreso ni de la energía, así que no se mueve cuando se completa algo.
+  const layout = layoutPath(modules.map((module) => ({ slug: module.slug, lessons: module.lessons.length })));
+  const { segments, junctionTone } = buildSegments(modules, layout.points);
+
   return (
-    <ol className="max-w-[46rem]">
-      {modules.map((module, moduleIndex) => {
-        const previousModule = moduleIndex > 0 ? modules[moduleIndex - 1] : null;
-        const nextModule = moduleIndex < modules.length - 1 ? modules[moduleIndex + 1] : null;
-        const first = module.lessons[0];
-        const last = module.lessons[module.lessons.length - 1];
-        const previousLast = previousModule?.lessons[previousModule.lessons.length - 1];
+    <div className="bp-route">
+      <ol className="bp-route-scope" style={{ height: layout.height }}>
+        <Trace segments={segments} height={layout.height} />
 
-        const lead: Tone = previousLast
-          ? toneBetween(previousLast, first)
-          : first.state === "completed"
-            ? "done"
-            : first.isCurrent
-              ? "active"
-              : "todo";
-        const tail: Tone | null = nextModule ? toneBetween(last, nextModule.lessons[0]) : null;
+        {modules.map((module, moduleIndex) => {
+          const laid = layout.modules[moduleIndex];
 
-        return (
-          <li
-            key={module.slug}
-            className="relative"
-            style={{ height: HEAD + module.lessons.length * ROW }}
-          >
-            <Trace module={module} lead={lead} tail={tail} />
-            <SectorHeader module={module} />
-            <ol>
-              {module.lessons.map((lesson, lessonIndex) => (
-                <Row
-                  key={lesson.slug}
-                  lesson={lesson}
-                  index={lessonIndex}
-                  count={module.lessons.length}
-                  moduleNumber={module.number}
-                  context={context}
-                />
-              ))}
-            </ol>
-          </li>
-        );
-      })}
-    </ol>
+          return (
+            <li key={module.slug} className="absolute inset-x-0" style={{ top: laid.top, height: laid.height }}>
+              <SectorHeader module={module} point={laid.junction} tone={junctionTone[moduleIndex]} />
+              <ol>
+                {module.lessons.map((lesson, lessonIndex) => (
+                  <Row
+                    key={lesson.slug}
+                    lesson={lesson}
+                    index={lessonIndex}
+                    point={laid.lessons[lessonIndex]}
+                    context={context}
+                  />
+                ))}
+              </ol>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }

@@ -31,7 +31,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <Link
-      className={`group inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`bp-press group inline-flex items-center justify-center gap-2 rounded-control font-medium transition-[background-color,border-color,color,transform] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
       {children}

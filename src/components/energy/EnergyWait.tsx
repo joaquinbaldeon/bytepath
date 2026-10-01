@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Sparkles, Zap } from "lucide-react";
+import { Coins, Loader2, Sparkles, Zap } from "lucide-react";
 import Link from "next/link";
 import { EnergyBolts } from "@/components/energy/EnergyBolts";
 import { FREE_MAX_ENERGY } from "@/lib/energy/config";
@@ -37,10 +37,10 @@ export function EnergyWait({ className = "" }: { className?: string }) {
     >
       <p className="flex items-center gap-2 text-sm font-semibold text-energy-ink">
         <Zap aria-hidden className="size-4 shrink-0 fill-current" />
-        Necesitas 1 ⚡ para completar esta lección
+        Te falta 1 ⚡ para cerrar esta lección
       </p>
       <p className="mt-1 text-dense leading-5 text-fg-muted">
-        Puedes seguir leyendo y repasando: la lección queda en progreso hasta que tengas energía.
+        Tu avance está guardado. Puedes seguir leyendo y repasando mientras la energía vuelve sola.
       </p>
 
       <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 font-mono text-xs text-fg-muted">
@@ -53,7 +53,7 @@ export function EnergyWait({ className = "" }: { className?: string }) {
         <span aria-hidden className="text-fg-subtle">
           ·
         </span>
-        <span>{countdown ? `Próxima energía en ${countdown}` : "La energía se regenera sola"}</span>
+        <span>{countdown ? `vuelve 1 en ${countdown}` : "se regenera sola"}</span>
       </p>
 
       <div className="mt-3.5 flex flex-wrap items-center gap-2">
@@ -63,16 +63,18 @@ export function EnergyWait({ className = "" }: { className?: string }) {
             onClick={() => void refill()}
             disabled={!canRefill || refilling}
             aria-busy={refilling}
-            className="focus-ring inline-flex h-9 items-center gap-1.5 rounded-control bg-energy px-3 text-dense font-medium text-ink transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-subtle"
+            className="focus-ring bp-press inline-flex h-9 items-center gap-1.5 rounded-control bg-energy px-3 text-dense font-medium text-ink transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-subtle"
           >
             {refilling ? (
               <Loader2 aria-hidden className="size-3.5 animate-spin" />
             ) : (
               <Zap aria-hidden className="size-3.5 fill-current" />
             )}
-            {canRefill
-              ? `Recargar · ${ENERGY_REFILL_COST} 🪙`
-              : `Recargar · faltan ${ENERGY_REFILL_COST - tokens} 🪙`}
+            Llenar la energía
+            <span className="inline-flex items-center gap-1 rounded-md bg-black/10 px-1.5 py-0.5 font-mono text-label tabular-nums">
+              <Coins aria-hidden className="size-3" />
+              {canRefill ? ENERGY_REFILL_COST : `faltan ${ENERGY_REFILL_COST - tokens}`}
+            </span>
           </button>
         )}
         <Link
@@ -80,7 +82,7 @@ export function EnergyWait({ className = "" }: { className?: string }) {
           className="focus-ring inline-flex h-9 items-center gap-1.5 rounded-control px-3 text-dense font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
         >
           <Sparkles aria-hidden className="size-3.5" />
-          Conocer Premium
+          Ver Premium
         </Link>
       </div>
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
+import { CodeMotto } from "@/components/ui/CodeMotto";
 import { Container } from "@/components/ui/Container";
 import { Logo } from "@/components/ui/Logo";
 import { legalDocuments } from "@/lib/legal/documents";
@@ -43,6 +44,7 @@ export function Footer() {
           <p className="mt-4 max-w-xs text-sm leading-relaxed">
             Aprende. Practica. Compite. Tu ruta en la programación competitiva con C++.
           </p>
+          <CodeMotto className="mt-5 inline-block rounded-control border border-white/5 bg-white/[0.03] px-3 py-2.5" />
         </div>
         {columns.map((column) => (
           <div key={column.title}>
@@ -66,8 +68,9 @@ export function Footer() {
         ))}
       </Container>
       <div className="border-t border-white/5">
-        <Container className="py-6 text-xs">
-          © {new Date().getFullYear()} BytePath. Todos los derechos reservados.
+        <Container className="flex flex-col gap-1 py-6 text-xs sm:flex-row sm:justify-between">
+          <span>© {new Date().getFullYear()} BytePath.</span>
+          <span className="text-slate-500">Un proyecto de estudiantes, para estudiantes que programan.</span>
         </Container>
       </div>
     </footer>

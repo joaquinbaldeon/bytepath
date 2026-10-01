@@ -1,4 +1,4 @@
-import { CircleCheck, Coins, Download, KeyRound, Zap } from "lucide-react";
+import { ArrowLeft, CircleCheck, Coins, Download, KeyRound, Zap } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -66,9 +66,14 @@ export default async function AccountPage({ searchParams }: PageProps<"/cuenta">
       <Navbar />
       <main className="min-h-dvh">
         <Container width="reading" className="pt-28 pb-16 sm:pt-32">
-          <p className="font-mono text-label tracking-[0.2em] text-fg-subtle uppercase">
-            Tu cuenta
-          </p>
+          <Link
+            href={routes.courses}
+            className="focus-ring group mb-5 inline-flex items-center gap-1.5 rounded-control text-dense text-fg-muted transition-colors hover:text-fg"
+          >
+            <ArrowLeft aria-hidden className="size-4 transition-transform group-hover:-translate-x-0.5" />
+            Volver a cursos
+          </Link>
+          <p className="font-mono text-label text-fg-subtle">{"// tu cuenta"}</p>
           <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight sm:text-3xl">
             Energía y tokens
           </h1>

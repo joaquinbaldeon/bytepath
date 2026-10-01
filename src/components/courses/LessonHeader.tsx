@@ -22,7 +22,7 @@ export function LessonHeader({
 }) {
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-night-900 text-white">
-      <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-5 sm:px-8">
+      <div className="flex h-14 items-center gap-4 px-5 sm:px-8">
         <Link href="/" aria-label="BytePath, inicio" className="shrink-0">
           <LogoMark className="size-7" />
         </Link>

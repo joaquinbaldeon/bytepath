@@ -1,18 +1,23 @@
 "use client";
 
-import { ArrowRight, Code, Loader2, Map as MapIcon, RotateCcw, Trophy } from "lucide-react";
+import { ArrowRight, Code, Flag, Loader2, Map as MapIcon, RotateCcw, Trophy } from "lucide-react";
 import Link from "next/link";
 import { CompletionStatus } from "@/components/courses/lesson/CompletionStatus";
+import { actionClass } from "@/components/ui/actions";
+import { Celebration } from "@/components/ui/Celebration";
 import type { LessonCompletion } from "@/lib/courses/useLessonCompletion";
 import { useOutOfEnergy } from "@/lib/energy/store";
 
 export type QuizNextLesson = { slug: string; title: string; href: string };
 
-const primary =
-  "focus-ring group inline-flex h-12 items-center justify-center gap-2 rounded-control bg-brand-500 px-6 font-medium text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60";
-const secondary =
-  "focus-ring inline-flex h-10 items-center justify-center gap-2 rounded-control border border-line px-4 text-sm font-medium transition-colors hover:bg-surface-2";
+const primary = actionClass("primary", "lg");
+const secondary = actionClass("secondary");
 
+/**
+ * Cierre del quiz. Como en el resultado del desafío, la acción principal es
+ * lo siguiente que toca: el desafío si lo hay, completar si falta, o la
+ * siguiente lección —con su nombre— si ya está completada.
+ */
 export function QuizSummary({
   total,
   firstTryCount,
@@ -42,25 +47,26 @@ export function QuizSummary({
   const outOfEnergy = useOutOfEnergy();
   const done = completesLesson && completion.completed;
   const waiting = completesLesson && !completion.completed;
+  const perfect = firstTryCount === total;
+  const arrow = (
+    <ArrowRight aria-hidden className="size-4 transition-transform group-hover:translate-x-0.5" />
+  );
 
   return (
     <div className="text-center">
-      <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-practice-soft">
-        <Trophy aria-hidden className="size-7 text-practice-ink" />
-      </span>
+      <Celebration icon={isModuleReview ? Flag : Trophy} size="lg" />
 
       <h2 className="mt-5 font-display text-2xl font-semibold tracking-tight">
         {done
           ? isModuleReview
-            ? "¡Módulo repasado!"
+            ? "¡Módulo superado!"
             : "¡Lección completada!"
           : "¡Quiz superado!"}
       </h2>
       <p className="mx-auto mt-3 max-w-sm leading-7 text-fg-muted">
-        Has resuelto las {total} preguntas
-        {firstTryCount === total
-          ? ", todas a la primera. Impecable."
-          : `, ${firstTryCount} de ellas a la primera.`}
+        {perfect
+          ? `${total} de ${total} a la primera. Impecable.`
+          : `Has resuelto las ${total}, ${firstTryCount} a la primera. Las que fallaste ya las tienes más claras.`}
       </p>
 
       {completesLesson && (
@@ -72,14 +78,14 @@ export function QuizSummary({
       {challengeAvailable ? (
         <>
           <p className="mx-auto mt-4 max-w-sm leading-7 text-fg-muted">
-            Ahora toca aplicarlo escribiendo código. La lección no se marcará como completada
-            hasta que resuelvas el desafío.
+            Ahora, a escribir código: la lección se completa cuando resuelvas el desafío.
           </p>
 
           <div className="mt-8 flex flex-col gap-2.5">
             <button type="button" onClick={onStartChallenge} className={primary}>
               <Code aria-hidden className="size-4" />
-              Resolver desafío
+              Ir al desafío
+              {arrow}
             </button>
 
             <Link href={coursePath} className={secondary}>
@@ -90,18 +96,24 @@ export function QuizSummary({
         </>
       ) : done ? (
         <div className="mt-7 flex flex-col gap-2.5">
-          <Link href={coursePath} className={primary}>
-            <MapIcon aria-hidden className="size-4" />
-            Ver el camino
-            <ArrowRight
-              aria-hidden
-              className="size-4 transition-transform group-hover:translate-x-0.5"
-            />
-          </Link>
-
-          {next && (
-            <Link href={next.href} className={secondary}>
-              {isModuleReview ? "Siguiente módulo" : "Siguiente lección"}: {next.title}
+          {next ? (
+            <>
+              <Link href={next.href} className={primary} title={next.title}>
+                <span className="truncate">
+                  {isModuleReview ? "Siguiente módulo" : "Siguiente"}: {next.title}
+                </span>
+                {arrow}
+              </Link>
+              <Link href={coursePath} className={secondary}>
+                <MapIcon aria-hidden className="size-4 text-fg-subtle" />
+                Ver el camino
+              </Link>
+            </>
+          ) : (
+            <Link href={coursePath} className={primary}>
+              <MapIcon aria-hidden className="size-4" />
+              Ver el camino
+              {arrow}
             </Link>
           )}
         </div>
@@ -115,7 +127,7 @@ export function QuizSummary({
           {completion.pending && (
             <button type="button" disabled className={primary}>
               <Loader2 aria-hidden className="size-4 animate-spin" />
-              Completando…
+              Guardando…
             </button>
           )}
           <button type="button" onClick={onClose} className={secondary}>
@@ -124,11 +136,7 @@ export function QuizSummary({
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={onReview}
-        className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
-      >
+      <button type="button" onClick={onReview} className={`mt-4 ${actionClass("quiet", "sm")}`}>
         <RotateCcw aria-hidden className="size-4" />
         Repasar las preguntas
       </button>

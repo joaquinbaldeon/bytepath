@@ -10,6 +10,7 @@ import type { PracticalChallenge } from "@/lib/courses/types";
 import { useLessonChallenge } from "@/lib/courses/useLessonChallenge";
 import type { LessonCompletion } from "@/lib/courses/useLessonCompletion";
 import type { NextLesson } from "@/components/courses/challenge/ChallengeResult";
+import type { LessonStep } from "@/components/courses/lesson/LessonSteps";
 
 type Pane = "brief" | "editor";
 
@@ -22,6 +23,7 @@ export function ChallengeWorkspace({
   next,
   completion,
   ready,
+  steps,
   onPassed,
   onBackToTheory,
 }: {
@@ -35,6 +37,8 @@ export function ChallengeWorkspace({
   completion: LessonCompletion;
   /** Quiz y desafío cumplidos, lección aún sin completar. */
   ready: boolean;
+  /** Pasos de la lección (Teoría · Quiz · Desafío · Completar), para saber cuánto falta. */
+  steps: LessonStep[];
   /** El juez ha dado la solución por buena; `recorded` dice si el servidor ha podido anotarlo. */
   onPassed: (recorded: boolean | undefined) => void;
   onBackToTheory: () => void;
@@ -100,6 +104,7 @@ export function ChallengeWorkspace({
         >
           <ChallengeBrief
             challenge={challenge}
+            steps={steps}
             hints={hints}
             revealedHints={revealedHints}
             onRevealHint={revealHint}

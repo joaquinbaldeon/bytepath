@@ -1,5 +1,6 @@
 import { ArrowRight, BookOpen, Clock, Route } from "lucide-react";
 import Link from "next/link";
+import { actionClass } from "@/components/ui/actions";
 import { Badge } from "@/components/ui/Badge";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import {
@@ -95,14 +96,25 @@ export function CourseCard({
       )}
 
       {resume && (
-        <div className="relative mt-5 self-start">
-          <Link href={lessonPath(course.slug, resume.slug)} className="group focus-ring inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 text-sm font-medium text-fg transition-colors hover:bg-surface-2">
-            {progress.started ? "Continuar" : "Empezar"}
+        <div className="relative mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <Link
+            href={lessonPath(course.slug, resume.slug)}
+            className={actionClass(progress.started && !progress.finished ? "primary" : "secondary", "sm")}
+          >
+            {progress.finished ? "Repasar" : progress.started ? "Continuar" : "Empezar"}
             <ArrowRight
               aria-hidden
               className="size-4 transition-transform group-hover:translate-x-0.5"
             />
           </Link>
+          {progress.started && !progress.finished && (
+            <span className="min-w-0 truncate text-dense text-fg-muted">
+              Siguiente: <span className="font-medium text-fg">{resume.title}</span>
+            </span>
+          )}
+          {progress.finished && (
+            <span className="text-dense font-medium text-practice-ink">¡Curso terminado! 🏆</span>
+          )}
         </div>
       )}
     </article>

@@ -71,9 +71,7 @@ export default function PremiumPage() {
             className="bg-dot-grid absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_at_top,black_20%,transparent_70%)]"
           />
           <Container width="wide">
-            <p className="font-mono text-label tracking-[0.2em] text-energy uppercase">
-              Energía y Premium
-            </p>
+            <p className="font-mono text-label text-energy">{"// energía y premium"}</p>
             <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
               Aprender no cuesta. Correr, un poco.
             </h1>

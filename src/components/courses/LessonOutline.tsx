@@ -85,6 +85,8 @@ export function LessonOutline({
   currentLessonSlug: string;
 }) {
   const [open, setOpen] = useState(false);
+  // Dónde estás, a la vista aunque el índice esté plegado (móvil y tablet).
+  const current = modules.flatMap((module) => module.lessons).find((lesson) => lesson.slug === currentLessonSlug);
 
   return (
     <>
@@ -97,10 +99,13 @@ export function LessonOutline({
           className="focus-ring-tight flex w-full items-center gap-2.5 px-5 py-3 text-sm font-medium"
         >
           <ListChecks aria-hidden className="size-4 text-learn-ink" />
-          Contenido del curso
+          <span className="shrink-0">Contenido del curso</span>
+          {current && (
+            <span className="ml-auto min-w-0 truncate text-fg-muted">{current.title}</span>
+          )}
           <ChevronDown
             aria-hidden
-            className={`ml-auto size-4 text-fg-subtle transition-transform ${open ? "rotate-180" : ""}`}
+            className={`size-4 shrink-0 text-fg-subtle transition-transform ${current ? "" : "ml-auto"} ${open ? "rotate-180" : ""}`}
           />
         </button>
         {open && (

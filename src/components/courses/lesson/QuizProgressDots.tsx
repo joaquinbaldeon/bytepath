@@ -26,7 +26,7 @@ export function QuizProgressDots({
   onSelect: (index: number) => void;
 }) {
   return (
-    <ol className="flex items-center gap-2">
+    <ol className="flex items-center gap-2 sm:gap-2.5">
       {Array.from({ length: total }, (_, i) => {
         const state = progressOf(i);
         return (
@@ -36,7 +36,7 @@ export function QuizProgressDots({
               onClick={() => onSelect(i)}
               aria-label={`Pregunta ${i + 1}: ${labels[state]}`}
               aria-current={state === "current" ? "step" : undefined}
-              className={`focus-ring block size-2.5 rounded-full transition-all hover:scale-125 ${styles[state]}`}
+              className={`focus-ring block size-2.5 rounded-full transition-all hover:scale-125 sm:size-3 ${styles[state]}`}
             />
           </li>
         );

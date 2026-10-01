@@ -84,7 +84,7 @@ export function QuizPanel({
 
   const headerLabel =
     view === "summary"
-      ? "Resultado"
+      ? "Resultado del quiz"
       : view === "review"
         ? `Repaso · pregunta ${reviewIndex + 1} de ${total}`
         : roundNumber === 1
@@ -93,12 +93,12 @@ export function QuizPanel({
 
   return (
     <>
-      <div className="flex shrink-0 items-center justify-between gap-4 border-b border-line-soft px-5 py-3 sm:px-6">
-        <p className="text-sm font-semibold">{headerLabel}</p>
+      <div className="flex shrink-0 items-center justify-between gap-4 border-b border-line-soft px-5 py-3 sm:px-8 sm:py-4">
+        <p className="text-sm font-semibold sm:text-base">{headerLabel}</p>
         <QuizProgressDots total={total} progressOf={progressOf} onSelect={goTo} />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-6">
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-8 sm:py-8">
         {view === "summary" ? (
           <QuizSummary
             total={total}
@@ -132,8 +132,8 @@ export function QuizPanel({
       </div>
 
       {view === "question" && (
-        <footer className="flex shrink-0 items-center justify-between gap-4 border-t border-line bg-surface px-5 py-3.5 sm:px-6">
-          <p className="font-mono text-xs text-fg-subtle">
+        <footer className="flex shrink-0 items-center justify-between gap-4 border-t border-line bg-surface-2/50 px-5 py-4 sm:px-8 sm:py-5">
+          <p className="font-mono text-xs text-fg-subtle sm:text-sm">
             {solvedCount}/{total} resueltas
           </p>
 
@@ -141,9 +141,9 @@ export function QuizPanel({
             <button
               type="button"
               onClick={next}
-              className="focus-ring group inline-flex h-11 items-center gap-2 rounded-control bg-brand-500 px-5 font-medium text-white transition-colors hover:bg-brand-600"
+              className="focus-ring bp-press group inline-flex h-11 items-center gap-2 rounded-control bg-brand-500 px-5 font-medium text-white transition-colors hover:bg-brand-600 sm:h-12 sm:px-6"
             >
-              {isFinalStep ? "Terminar" : "Siguiente pregunta"}
+              {isFinalStep ? "Ver resultado" : "Siguiente pregunta"}
               <ChevronRight
                 aria-hidden
                 className="size-4 transition-transform group-hover:translate-x-0.5"
@@ -155,7 +155,7 @@ export function QuizPanel({
               onClick={() => void check()}
               disabled={!answer.selected || checking}
               aria-busy={checking}
-              className="focus-ring inline-flex h-11 items-center gap-2 rounded-control bg-fg px-5 font-medium text-canvas transition-colors hover:bg-fg/90 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-subtle"
+              className="focus-ring bp-press inline-flex h-11 items-center gap-2 rounded-control bg-fg px-5 font-medium text-canvas sm:h-12 sm:px-6 transition-colors hover:bg-fg/90 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-subtle"
             >
               {checking && <Loader2 aria-hidden className="size-4 animate-spin" />}
               Comprobar
@@ -165,8 +165,8 @@ export function QuizPanel({
       )}
 
       {view === "review" && (
-        <footer className="flex shrink-0 items-center justify-between gap-4 border-t border-line bg-surface px-5 py-3.5 sm:px-6">
-          <p className="font-mono text-xs text-fg-subtle">Repasando tus respuestas</p>
+        <footer className="flex shrink-0 items-center justify-between gap-4 border-t border-line bg-surface-2/50 px-5 py-4 sm:px-8 sm:py-5">
+          <p className="font-mono text-xs text-fg-subtle sm:text-sm">Repasando tus respuestas</p>
           <button
             type="button"
             onClick={exitReview}

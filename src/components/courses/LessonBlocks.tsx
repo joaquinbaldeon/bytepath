@@ -3,19 +3,20 @@ import { CodeBlock } from "@/components/courses/CodeBlock";
 import { TraceBlock } from "@/components/courses/TraceBlock";
 import type { ContentBlock } from "@/lib/courses/types";
 
-function Block({ block }: { block: ContentBlock }) {
+/** Un bloque suelto. `LessonBody` (teoría) y `LessonBlocks` (enunciados) lo reutilizan. */
+export function BlockView({ block }: { block: ContentBlock }) {
   switch (block.type) {
     case "paragraph":
-      return <p className="text-[17px] leading-8 text-fg-body">{block.text}</p>;
+      return <p className="text-[15.5px] leading-7 text-fg-body">{block.text}</p>;
 
     case "heading":
       return (
-        <h2 className="pt-4 font-display text-2xl font-semibold tracking-tight">{block.text}</h2>
+        <h2 className="pt-4 font-display text-xl font-semibold tracking-tight">{block.text}</h2>
       );
 
     case "list": {
       const items = block.items.map((item, i) => (
-        <li key={i} className="leading-8 text-fg-body">
+        <li key={i} className="text-[15.5px] leading-7 text-fg-body">
           {item}
         </li>
       ));
@@ -55,7 +56,7 @@ export function LessonBlocks({ blocks }: { blocks: ContentBlock[] }) {
   return (
     <div className="space-y-6">
       {blocks.map((block, i) => (
-        <Block key={i} block={block} />
+        <BlockView key={i} block={block} />
       ))}
     </div>
   );

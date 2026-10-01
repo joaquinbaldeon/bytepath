@@ -9,7 +9,7 @@ import { useLiveAccount } from "@/lib/energy/store";
 import { useCountdown } from "@/lib/energy/useCountdown";
 import type { AccountState } from "@/lib/energy/types";
 import { routes } from "@/lib/site";
-import { ENERGY_REFILL_COST } from "@/lib/tokens/config";
+import { ENERGY_REFILL_COST, LESSON_COMPLETION_REWARD } from "@/lib/tokens/config";
 import { useEnergyRefill } from "@/lib/tokens/useEnergyRefill";
 
 /**
@@ -74,10 +74,14 @@ export function EnergyPanel({
   const next = account.isPremium
     ? "Con Premium no esperas ni gastas nada."
     : isFull
-      ? "Energía al máximo."
-      : countdown
-        ? `Próxima energía en ${countdown}`
-        : "La energía se regenera sola.";
+      ? `A tope: puedes completar ${limit} lecciones seguidas.`
+      : remaining === 0
+        ? countdown
+          ? `Sin energía por ahora · vuelve 1 en ${countdown}`
+          : "Sin energía por ahora · se regenera sola"
+        : countdown
+          ? `+1 en ${countdown}`
+          : "Se regenera sola.";
 
   const refillButton = !account.isPremium && !isFull && (
     <button
@@ -85,14 +89,18 @@ export function EnergyPanel({
       onClick={() => void refill()}
       disabled={!canRefill || refilling}
       aria-busy={refilling}
-      className="focus-ring inline-flex h-9 items-center justify-center gap-1.5 rounded-control bg-energy px-3 text-dense font-medium text-ink transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-subtle"
+      className="focus-ring bp-press inline-flex h-9 items-center justify-center gap-1.5 rounded-control bg-energy px-3 text-dense font-medium text-ink transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-subtle"
     >
       {refilling ? (
         <Loader2 aria-hidden className="size-3.5 animate-spin" />
       ) : (
         <Zap aria-hidden className="size-3.5 fill-current" />
       )}
-      {canRefill ? `Recargar · ${ENERGY_REFILL_COST} 🪙` : `Faltan ${missing} 🪙 para recargar`}
+      Llenar la energía
+      <span className="inline-flex items-center gap-1 rounded-md bg-black/10 px-1.5 py-0.5 font-mono text-label tabular-nums">
+        <Coins aria-hidden className="size-3" />
+        {canRefill ? ENERGY_REFILL_COST : `faltan ${missing}`}
+      </span>
     </button>
   );
 
@@ -127,7 +135,7 @@ export function EnergyPanel({
   }
 
   return (
-    <RailSection title="Energía" icon={Zap}>
+    <RailSection title="Energía y tokens" icon={Zap}>
       <div className="flex items-center justify-between gap-3">
         {bolts}
         <span className="font-mono text-sm font-semibold text-fg tabular-nums">
@@ -137,10 +145,10 @@ export function EnergyPanel({
       </div>
       <p className="mt-2 text-dense text-fg-muted">{next}</p>
       <p className="mt-1.5 text-label leading-4 text-fg-subtle">
-        Entrar a una lección es gratis. Completarla cuesta 1 ⚡.
+        Entrar y estudiar es gratis. Completar una lección cuesta 1 ⚡.
       </p>
 
-      <div className="mt-3.5 flex items-center justify-between gap-3">
+      <div className="mt-3.5 border-t border-line-soft pt-3">
         <Link
           href={routes.account}
           className="focus-ring inline-flex items-center gap-1.5 rounded-control text-dense text-fg-muted hover:text-fg"
@@ -148,6 +156,12 @@ export function EnergyPanel({
           <Coins aria-hidden className="size-3.5 text-brand-ink" />
           <span className="font-mono font-medium text-fg tabular-nums">{tokens}</span> tokens
         </Link>
+        {!account.isPremium && (
+          <p className="mt-1 text-label leading-4 text-fg-subtle">
+            Ganas {LESSON_COMPLETION_REWARD} por lección. Con {ENERGY_REFILL_COST} llenas la energía
+            sin esperar.
+          </p>
+        )}
       </div>
 
       {refillButton && <div className="mt-3 flex flex-col">{refillButton}</div>}

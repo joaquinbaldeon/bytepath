@@ -1,16 +1,19 @@
-import { BookOpen, Clock, Compass, ListChecks, Route } from "lucide-react";
-import Link from "next/link";
+import { BookOpen, Clock, ListChecks } from "lucide-react";
 import type { Metadata } from "next";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { CourseCard } from "@/components/courses/CourseCard";
+import { NextStepCard } from "@/components/courses/NextStepCard";
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
+import { CodeMotto } from "@/components/ui/CodeMotto";
 import { Container } from "@/components/ui/Container";
-import { RailCard, RailStat } from "@/components/ui/RailCard";
+import { RailCard } from "@/components/ui/RailCard";
 import { RailLayout } from "@/components/ui/RailLayout";
 import { formatDuration, getCourses, getCourseStats, lessonPath } from "@/lib/courses/api";
 import { getCourseProgress, getResumeLesson } from "@/lib/courses/progress";
 import { readAllCoursesProgress } from "@/lib/courses/server";
+import { ENERGY_REGEN_HOURS } from "@/lib/energy/config";
+import { ENERGY_REFILL_COST, LESSON_COMPLETION_REWARD } from "@/lib/tokens/config";
 
 export const metadata: Metadata = {
   title: "Cursos · BytePath",
@@ -47,7 +50,7 @@ export default async function CoursesPage() {
   });
   const next = inProgress ?? courses[0];
   const nextLesson = next ? getResumeLesson(next, byCourse(next.slug)) : undefined;
-  const nextStarted = next ? getCourseProgress(next, byCourse(next.slug)).started : false;
+  const nextProgress = next ? getCourseProgress(next, byCourse(next.slug)) : null;
 
   return (
     <>
@@ -61,15 +64,13 @@ export default async function CoursesPage() {
             className="bg-dot-grid absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_at_top,black_20%,transparent_70%)]"
           />
           <Container width="wide">
-            <p className="font-mono text-label tracking-[0.2em] text-learn uppercase">
-              01 · Aprende
-            </p>
+            <p className="font-mono text-label text-learn">{"// 01 · aprende"}</p>
             <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
               Cursos
             </h1>
             <p className="mt-3 max-w-2xl leading-relaxed text-slate-300">
-              Rutas divididas en módulos y lecciones cortas. Lees la teoría, la compruebas con un
-              quiz y la afianzas escribiendo código que se compila de verdad.
+              Lecciones cortas, a tu ritmo: lees la idea, la compruebas con un quiz y la pones a
+              prueba con código que se compila de verdad. Sin prisa y sin letra pequeña.
             </p>
           </Container>
         </section>
@@ -79,32 +80,13 @@ export default async function CoursesPage() {
             <RailLayout
               rail={
                 <>
-                  <RailCard title="Tu ruta" icon={Compass}>
-                    <div className="flex flex-col gap-2">
-                      <RailStat label="Cursos" value={String(courses.length)} />
-                      <RailStat label="Lecciones disponibles" value={String(totals.lessons)} />
-                      <RailStat label="Duración" value={formatDuration(totals.minutes)} />
-                    </div>
-                  </RailCard>
-
-                  {next && nextLesson && (
-                    <RailCard title={nextStarted ? "Continuar" : "Empieza por aquí"} icon={Route}>
-                      <p className="text-dense text-fg-muted">{next.title}</p>
-                      <p className="mt-1 font-medium">{nextLesson.title}</p>
-                      <div className="mt-3 flex flex-col">
-                        <Link href={lessonPath(next.slug, nextLesson.slug)} className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-control bg-brand-500 text-dense font-medium text-white transition-colors hover:bg-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400">
-                          {nextStarted ? "Retomar" : "Empezar"}
-                        </Link>
-                      </div>
-                    </RailCard>
-                  )}
-
                   <RailCard title="Cómo es una lección" icon={ListChecks}>
                     <ol className="flex flex-col gap-2.5 text-dense text-fg-muted">
                       {[
-                        ["Teoría", "explicación breve con ejemplos"],
-                        ["Quiz", "seis preguntas para comprobar"],
-                        ["Desafío", "código que se compila y se evalúa"],
+                        ["Teoría", "la idea, corta y con ejemplos"],
+                        ["Quiz", "seis preguntas para comprobarla"],
+                        ["Desafío", "tu código, compilado y evaluado"],
+                        ["Completar", `−1 ⚡ y +${LESSON_COMPLETION_REWARD} tokens`],
                       ].map(([step, detail], i) => (
                         <li key={step} className="flex gap-2.5">
                           <span
@@ -119,6 +101,11 @@ export default async function CoursesPage() {
                         </li>
                       ))}
                     </ol>
+                    <p className="mt-3 text-label leading-4 text-fg-subtle">
+                      La energía vuelve sola (+1 cada {ENERGY_REGEN_HOURS} h). Los tokens sirven para no esperar:
+                      con {ENERGY_REFILL_COST} la llenas de golpe.
+                    </p>
+                    <CodeMotto className="mt-3.5 rounded-control bg-code px-3 py-2.5" />
                   </RailCard>
 
                   {/* Última tarjeta del raíl, y la única prescindible: las de
@@ -127,11 +114,27 @@ export default async function CoursesPage() {
                 </>
               }
             >
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="font-display text-lg font-semibold">Catálogo</h2>
-                <p className="inline-flex items-center gap-1.5 text-dense text-fg-muted">
+              {next && nextLesson && nextProgress && (
+                <div className="mb-8">
+                  <NextStepCard
+                    started={nextProgress.started}
+                    courseTitle={next.title}
+                    lessonTitle={nextLesson.title}
+                    lessonMinutes={nextLesson.estimatedMinutes}
+                    href={lessonPath(next.slug, nextLesson.slug)}
+                    completed={nextProgress.completed}
+                    total={nextProgress.total}
+                    percent={nextProgress.percent}
+                  />
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h2 className="font-display text-lg font-semibold">Todos los cursos</h2>
+                <p className="inline-flex flex-wrap items-center gap-1.5 text-dense text-fg-muted">
                   <BookOpen aria-hidden className="size-4 text-fg-subtle" />
-                  {courses.length} {courses.length === 1 ? "curso" : "cursos"}
+                  {courses.length} {courses.length === 1 ? "curso" : "cursos"} · {totals.lessons}{" "}
+                  lecciones
                   <span aria-hidden className="text-fg-subtle">
                     ·
                   </span>

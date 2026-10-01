@@ -8,9 +8,13 @@ import {
 } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { EnergyMeter } from "@/components/energy/EnergyMeter";
+import { headerItemClass, isActivePath } from "@/components/layout/headerItem";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { TokenBadge } from "@/components/tokens/TokenBadge";
 import { Badge } from "@/components/ui/Badge";
 import { Container } from "@/components/ui/Container";
 import { Logo } from "@/components/ui/Logo";
@@ -20,6 +24,10 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const { scrollY } = useScroll();
+  const pathname = usePathname();
+  // Solo los enlaces a páginas reales pueden estar "activos"; los de la Home
+  // (`/#problemas`) nunca, porque no son una página.
+  const isCurrent = (href: string) => !href.includes("#") && isActivePath(pathname, href);
 
   useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 12));
 
@@ -43,12 +51,13 @@ export function Navbar() {
           <Logo />
         </Link>
 
-        <nav aria-label="Principal" className="hidden items-center gap-1 md:flex">
+        <nav aria-label="Principal" className="hidden items-center gap-1 lg:flex">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-300 transition-colors hover:text-white"
+              aria-current={isCurrent(link.href) ? "page" : undefined}
+              className={headerItemClass(isCurrent(link.href), "flex gap-2 text-sm text-slate-300")}
             >
               {link.label}
               {"soon" in link && <Badge tone="soonDark">Pronto</Badge>}
@@ -56,12 +65,17 @@ export function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-2 lg:flex">
           <ThemeToggle className="text-slate-300 hover:bg-white/5 hover:text-white" />
           <UserMenu />
         </div>
 
-        <div className="flex items-center gap-1 md:hidden">
+        {/* En móvil, energía y tokens quedan fijos en la barra: son lo que más
+            se consulta y no deberían esconderse detrás del menú. Cada uno se
+            pinta solo si hay sesión. */}
+        <div className="flex items-center gap-0.5 lg:hidden">
+          <EnergyMeter />
+          <TokenBadge />
           <ThemeToggle className="text-slate-300 hover:bg-white/5 hover:text-white" />
           <button
             type="button"
@@ -84,7 +98,7 @@ export function Navbar() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25 }}
-            className="overflow-hidden border-t border-white/10 md:hidden"
+            className="overflow-hidden border-t border-white/10 lg:hidden"
           >
             <Container className="flex flex-col gap-1 py-4">
               {navLinks.map((link) => (
@@ -92,14 +106,17 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={close}
-                  className="flex items-center justify-between rounded-lg px-3 py-3 text-slate-200 transition-colors hover:bg-white/5"
+                  aria-current={isCurrent(link.href) ? "page" : undefined}
+                  className={`flex items-center justify-between rounded-lg px-3 py-3 text-slate-200 transition-colors hover:bg-white/5 ${
+                    isCurrent(link.href) ? "bg-white/10 text-white" : ""
+                  }`}
                 >
                   {link.label}
                   {"soon" in link && <Badge tone="soonDark">Pronto</Badge>}
                 </Link>
               ))}
               <div className="mt-3">
-                <UserMenu onNavigate={close} />
+                <UserMenu onNavigate={close} showMeters={false} />
               </div>
             </Container>
           </motion.div>

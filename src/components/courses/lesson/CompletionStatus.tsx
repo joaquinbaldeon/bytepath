@@ -55,7 +55,7 @@ export function CompletionChips({ feedback }: { feedback: CompletionFeedback }) 
             className="bp-rise inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1 text-dense font-medium whitespace-nowrap text-brand-ink"
             style={{ animationDelay: "120ms" }}
           >
-            Sin gastar energía
+            Premium · sin gastar ⚡
           </li>
         )
       )}
@@ -105,7 +105,7 @@ export function CompletionStatus({
     return (
       <p className={`inline-flex items-center justify-center gap-2 text-sm text-fg-muted ${className}`}>
         <Loader2 aria-hidden className="size-4 animate-spin" />
-        Completando la lección…
+        Guardando tu progreso…
       </p>
     );
   }

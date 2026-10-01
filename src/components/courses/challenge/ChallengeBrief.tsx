@@ -2,16 +2,19 @@
 
 import { ArrowLeft, Lightbulb } from "lucide-react";
 import { LessonBlocks } from "@/components/courses/LessonBlocks";
+import { type LessonStep, LessonSteps } from "@/components/courses/lesson/LessonSteps";
 import type { PracticalChallenge } from "@/lib/courses/types";
 
 export function ChallengeBrief({
   challenge,
+  steps,
   hints,
   revealedHints,
   onRevealHint,
   onBackToTheory,
 }: {
   challenge: PracticalChallenge;
+  steps: LessonStep[];
   hints: string[];
   revealedHints: number;
   onRevealHint: () => void;
@@ -19,14 +22,17 @@ export function ChallengeBrief({
 }) {
   return (
     <article className="mx-auto max-w-2xl px-5 py-8 sm:px-8 sm:py-10">
-      <button
-        type="button"
-        onClick={onBackToTheory}
-        className="focus-ring inline-flex items-center gap-1.5 rounded-control text-sm text-fg-muted transition-colors hover:text-fg"
-      >
-        <ArrowLeft aria-hidden className="size-4" />
-        Volver a la teoría
-      </button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={onBackToTheory}
+          className="focus-ring inline-flex items-center gap-1.5 rounded-control text-sm text-fg-muted transition-colors hover:text-fg"
+        >
+          <ArrowLeft aria-hidden className="size-4" />
+          Volver a la teoría
+        </button>
+        <LessonSteps steps={steps} />
+      </div>
 
       <p className="mt-6 font-mono text-[11px] tracking-wider text-compete-ink uppercase">
         Desafío práctico

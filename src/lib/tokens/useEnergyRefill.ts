@@ -28,15 +28,15 @@ export function useEnergyRefill() {
           tokens: outcome.tokens,
           nextEnergyAt: outcome.nextEnergyAt,
         });
-        setNotice("Energía recargada al máximo.");
+        setNotice("¡Listo! Energía a tope ⚡");
       } else {
         // Rechazada, pero puede traer un saldo más al día (otra pestaña gastó
         // tokens mientras tanto): se refleja igualmente.
         if (outcome.tokens !== null) patchAccountState({ tokens: outcome.tokens });
         setNotice(
           outcome.reason === "energy_full"
-            ? "Ya tienes la energía al máximo."
-            : "No tienes tokens suficientes todavía.",
+            ? "Tu energía ya está a tope: no hace falta gastar tokens."
+            : "Todavía no tienes tokens suficientes. Completa lecciones para ganar más.",
         );
       }
     } catch {

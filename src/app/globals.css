@@ -369,7 +369,7 @@
 /* ---------------------------------------------------------------------------
    Energía: el rayo que se gasta y el que vuelve.
 
-   Se aplican al rayo concreto que cambia (el 6.º al pasar de 6 a 5), no a todo
+   Se aplican al rayo concreto que cambia (el 4.º al pasar de 4 a 3), no a todo
    el medidor, para que el cambio se lea como "se ha ido ESTE". Un solo
    movimiento, sin bucles. Colores literales por la misma razón que los pulsos.
    --------------------------------------------------------------------------- */
@@ -469,30 +469,15 @@
   mask-image: linear-gradient(to bottom, transparent, black 8rem, black calc(100% - 8rem), transparent);
 }
 
-/* La traza ya recorrida se dibuja de un trazo al cargar. `pathLength=1` en el
-   SVG normaliza la longitud, así que sirve para cualquier tramo. */
-@keyframes bp-trace-draw {
+/* La parte ya recorrida se revela de arriba abajo al cargar. Es un recorte que
+   se abre (y no un trazo que se dibuja con pathLength) porque la traza se estira
+   con el ancho y `pathLength` no es fiable con `non-scaling-stroke`. */
+@keyframes bp-trace-reveal {
   from {
-    stroke-dashoffset: 1;
+    clip-path: inset(0 -12px 100% -12px);
   }
   to {
-    stroke-dashoffset: 0;
-  }
-}
-
-/* Punto de señal que recorre el tramo activo, del nodo hecho al que toca. */
-@keyframes bp-signal {
-  from {
-    offset-distance: 0%;
-    opacity: 0;
-  }
-  12%,
-  88% {
-    opacity: 1;
-  }
-  to {
-    offset-distance: 100%;
-    opacity: 0;
+    clip-path: inset(0 -12px -12px -12px);
   }
 }
 
@@ -520,13 +505,8 @@
   }
 }
 
-.bp-trace-draw {
-  stroke-dasharray: 1;
-  animation: bp-trace-draw 1.1s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-
-.bp-signal {
-  animation: bp-signal 2.6s linear infinite;
+.bp-trace-reveal {
+  animation: bp-trace-reveal 1.2s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .bp-burst {
@@ -538,14 +518,157 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bp-trace-draw,
-  .bp-signal,
+  .bp-trace-reveal,
   .bp-burst,
   .bp-node-in {
     animation: none;
   }
-  .bp-signal,
   .bp-burst {
     display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Composición del camino (LearningPath + lib/courses/pathLayout.ts).
+
+   El camino serpentea más o menos según el ANCHO DEL PROPIO CONTENEDOR (no de
+   la ventana: la columna cambia con el raíl lateral), y eso se resuelve aquí,
+   en CSS, para que no haya medición en JavaScript ni salto al hidratar:
+
+     --cx    dónde está el centro del carril (px en móvil, % en ancho)
+     --amp   cuánto se aleja del centro en el extremo (o = ±1)
+     --o     la posición de CADA punto, en [-1, 1], que pone el componente
+
+   Un punto está en `calc(var(--cx) + var(--o) * var(--amp))`. La traza es un
+   SVG con viewBox -1..1 en horizontal, colocado y dimensionado con esas mismas
+   dos variables, así que la curva pasa exactamente por el centro de cada nodo
+   a cualquier ancho.
+
+   · estrecho (móvil):  el camino serpentea poco, en un carril a la izquierda,
+                        y todo el texto se alinea en una columna a su derecha.
+   · medio (tablet):    el camino ocupa el centro y el texto va a un lado.
+   · ancho (escritorio): recorrido amplio; el texto cae del lado con sitio.
+   --------------------------------------------------------------------------- */
+@layer components {
+  .bp-route {
+    container-type: inline-size;
+    /* Nada del camino puede provocar scroll horizontal, pase lo que pase. */
+    overflow-x: clip;
+  }
+
+  .bp-route-scope {
+    --cx: 3.25rem;
+    --amp: 0.875rem;
+    position: relative;
+  }
+
+  .bp-trace {
+    position: absolute;
+    top: 0;
+    left: calc(var(--cx) - var(--amp));
+    width: calc(var(--amp) * 2);
+    pointer-events: none;
+  }
+
+  .bp-node {
+    left: calc(var(--cx) + var(--o) * var(--amp));
+  }
+
+  .bp-label {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    /* Estrecho: una columna de texto a la derecha del carril, sea cual sea `--o`. */
+    left: calc(var(--cx) + var(--amp) + 2.75rem);
+    right: 0.75rem;
+  }
+
+  @container (min-width: 32rem) {
+    .bp-route-scope {
+      --cx: 50%;
+      --amp: 22%;
+    }
+
+    .bp-label[data-side="right"] {
+      left: calc(var(--cx) + var(--o) * var(--amp) + 2.85rem);
+    }
+
+    .bp-label[data-side="left"] {
+      left: 0.75rem;
+      right: calc(100% - (var(--cx) + var(--o) * var(--amp)) + 2.85rem);
+      justify-content: flex-end;
+      text-align: right;
+    }
+
+    .bp-label[data-side="left"] .bp-label-row {
+      justify-content: flex-end;
+    }
+  }
+
+  @container (min-width: 44rem) {
+    .bp-route-scope {
+      --amp: 32%;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Feedback de acciones.
+
+   · bp-press: el botón cede un poco al pulsarlo. Es la confirmación táctil de
+     "te he oído" antes de que llegue la respuesta del servidor.
+   · bp-pop: el +10 de tokens entra con un pequeño rebote, una vez.
+   · bp-celebrate: el icono del momento de éxito (lección completada, desafío
+     resuelto) aparece con un salto corto; las chispas son bp-burst, las
+     mismas del camino, en verde de "aceptado".
+   Nada se repite en bucle: cada una ocurre una vez y se queda quieta.
+   --------------------------------------------------------------------------- */
+.bp-press:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@keyframes bp-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes bp-celebrate {
+  0% {
+    transform: scale(0.7) rotate(-8deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08) rotate(3deg);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
+}
+
+.bp-pop {
+  animation: bp-pop 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.bp-celebrate {
+  animation: bp-celebrate 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-press:active:not(:disabled) {
+    transform: none;
+  }
+  .bp-pop,
+  .bp-celebrate {
+    animation: none;
   }
 }

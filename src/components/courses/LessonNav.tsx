@@ -7,9 +7,9 @@ import { lessonPath } from "@/lib/courses/api";
  * Salidas al final de la teoría: la lección anterior y el camino.
  *
  * Ya no hay "Siguiente lección" aquí. Con el camino, la siguiente lección se
- * desbloquea al completar esta, y entrar a ella es una acción con
- * consecuencias (cuesta energía): no puede ser un enlace suelto al final de un
- * texto. La forma de avanzar es terminar la lección con el botón "Continuar".
+ * desbloquea al completar esta, así que no puede ser un enlace suelto al final
+ * de un texto: la forma de avanzar es la barra de abajo, que siempre ofrece
+ * el paso que toca (quiz, desafío, completar o la siguiente lección).
  */
 export function LessonNav({
   courseSlug,
@@ -23,7 +23,7 @@ export function LessonNav({
   return (
     <nav
       aria-label="Navegación entre lecciones"
-      className="mt-12 grid gap-3 border-t border-line pt-8 sm:grid-cols-2"
+      className="mt-14 grid max-w-4xl gap-3 border-t border-line pt-8 sm:grid-cols-2"
     >
       {previous ? (
         <Link

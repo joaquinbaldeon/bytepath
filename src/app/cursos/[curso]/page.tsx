@@ -1,6 +1,7 @@
 import {
   ArrowRight,
   BookOpen,
+  Play,
   ChevronRight,
   Clock,
   DatabaseZap,
@@ -17,6 +18,7 @@ import { LearningPath } from "@/components/courses/path/LearningPath";
 import { EnergyPanel } from "@/components/energy/EnergyPanel";
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
+import { actionClass } from "@/components/ui/actions";
 import { Badge } from "@/components/ui/Badge";
 import { Container } from "@/components/ui/Container";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -134,13 +136,28 @@ export default async function CoursePage({ params }: PageProps<"/cursos/[curso]"
 
             {resume && (
               <div className="mt-6">
-                <Link href={lessonPath(course.slug, resume.slug)} className="group inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-brand-500 px-6 text-[15px] font-medium text-white shadow-[0_10px_30px_-10px_rgb(109_94_246/0.7)] transition-colors hover:bg-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400">
-                  {summary.finished
-                    ? "Repasar el curso"
-                    : summary.started
-                      ? "Continuar"
-                      : "Empezar curso"}
+                <Link
+                  href={lessonPath(course.slug, resume.slug)}
+                  className={`${actionClass("primary", "lg")} max-w-full`}
+                >
+                  <Play aria-hidden className="size-4 shrink-0 fill-current" />
+                  <span className="truncate">
+                    {summary.finished
+                      ? "Repasar el curso"
+                      : summary.started
+                        ? `Continuar: ${resume.title}`
+                        : `Empezar: ${resume.title}`}
+                  </span>
+                  <ArrowRight
+                    aria-hidden
+                    className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5"
+                  />
                 </Link>
+                {summary.completed > 0 && !summary.finished && (
+                  <p className="mt-2.5 font-mono text-label text-slate-400">
+                    {`// llevas ${summary.completed} de ${summary.total} · ${summary.percent}%`}
+                  </p>
+                )}
               </div>
             )}
           </Container>
@@ -181,7 +198,7 @@ export default async function CoursePage({ params }: PageProps<"/cursos/[curso]"
                   <RailSection title="Tu progreso" icon={TrendingUp}>
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="text-dense text-fg-muted">
-                        {summary.completed} de {summary.total} AC
+                        {summary.completed} de {summary.total} lecciones
                       </span>
                       <span className="font-mono text-2xl font-semibold text-learn-ink tabular-nums">
                         {summary.percent}%
@@ -222,7 +239,7 @@ export default async function CoursePage({ params }: PageProps<"/cursos/[curso]"
 
                   <RailSection title="Este curso" icon={Route}>
                     <div className="flex flex-col gap-2">
-                      <RailStat label="Sectores" value={String(stats.moduleCount)} />
+                      <RailStat label="Módulos" value={String(stats.moduleCount)} />
                       <RailStat
                         label={stats.inPreparation ? "Lecciones disponibles" : "Lecciones"}
                         value={
@@ -247,12 +264,19 @@ export default async function CoursePage({ params }: PageProps<"/cursos/[curso]"
                 <h2 className="font-display text-xl font-semibold tracking-tight">Tu camino</h2>
                 <p className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-wider text-fg-subtle uppercase">
                   <BookOpen aria-hidden className="size-3.5" />
-                  {stats.lessonCount} nodos
+                  {stats.lessonCount} lecciones
                   <span aria-hidden>·</span>
                   <Clock aria-hidden className="size-3.5" />
                   {formatDuration(stats.estimatedMinutes)}
                 </p>
               </div>
+              <p className="mt-1.5 text-dense text-fg-muted">
+                Una lección tras otra: cada una abre la siguiente. Las que completas se marcan{" "}
+                <span className="rounded bg-practice/15 px-1 py-px font-mono text-label font-semibold text-practice-ink">
+                  AC
+                </span>
+                , como un juez marca una solución aceptada.
+              </p>
 
               {unavailable && (
                 <p

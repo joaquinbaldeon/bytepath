@@ -22,14 +22,14 @@ export function QuizQuestionCard({
 
   return (
     <div>
-      <p className="font-mono text-[11px] tracking-wider text-learn-ink uppercase">
+      <p className="font-mono text-[11px] tracking-wider text-learn-ink uppercase sm:text-xs">
         {questionKindLabels[question.kind]}
       </p>
-      <h2 className="mt-2 text-lg leading-7 font-medium">{question.prompt}</h2>
+      <h2 className="mt-2 text-xl leading-8 font-medium sm:mt-3 sm:text-2xl sm:leading-9">{question.prompt}</h2>
 
-      {question.code && <CodeBlock code={question.code} className="mt-4" />}
+      {question.code && <CodeBlock code={question.code} className="mt-5 sm:mt-6" />}
 
-      <ul className="mt-5 space-y-2.5">
+      <ul className="mt-6 space-y-3 sm:mt-8 sm:space-y-3.5">
         {options.map((option) => {
           const selected = answer.selected === option.id;
           // El servidor solo confirma la respuesta correcta al acertarla: si la
@@ -52,14 +52,14 @@ export function QuizQuestionCard({
                 onClick={() => onSelect(option.id)}
                 disabled={answer.checked}
                 aria-pressed={selected}
-                className={`focus-ring flex w-full items-start gap-3 rounded-card border px-4 py-3 text-left text-body transition-colors disabled:cursor-default ${state}`}
+                className={`focus-ring flex w-full items-start gap-3.5 rounded-card border px-4 py-3.5 text-left text-base leading-7 transition-colors disabled:cursor-default sm:gap-4 sm:px-5 sm:py-4 ${state}`}
               >
                 <span
-                  className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border ${
+                  className={`mt-1 grid size-5 shrink-0 place-items-center rounded-full border sm:size-6 ${
                     selected ? "border-learn bg-learn" : "border-line"
                   }`}
                 >
-                  {selected && <span className="size-1.5 rounded-full bg-white" />}
+                  {selected && <span className="size-1.5 rounded-full bg-white sm:size-2" />}
                 </span>
                 <span className="flex-1">{option.text}</span>
                 {showFeedback && selected && (
@@ -79,23 +79,23 @@ export function QuizQuestionCard({
 
       {showFeedback && (
         <div
-          className={`mt-5 rounded-xl border px-4 py-3.5 ${
+          className={`mt-6 rounded-xl border px-4 py-4 sm:px-5 ${
             answer.solved
               ? "border-practice/40 bg-practice-soft"
               : "border-hard/40 bg-danger-soft"
           }`}
         >
           <p
-            className={`text-sm font-semibold ${
+            className={`text-sm font-semibold sm:text-base ${
               answer.solved ? "text-practice-ink" : "text-danger-ink"
             }`}
           >
-            {answer.solved ? "¡Correcto!" : "No es la respuesta correcta"}
+            {answer.solved ? "¡Correcto!" : "Esta no era"}
           </p>
-          <p className="mt-1 text-sm leading-6 text-fg-muted">
+          <p className="mt-1 text-sm leading-6 text-fg-muted sm:text-base sm:leading-7">
             {answer.solved
               ? answer.explanation
-              : "Volverá al final del quiz para que la intentes de nuevo."}
+              : "Sin problema: vuelve al final del quiz para que la intentes otra vez."}
           </p>
         </div>
       )}

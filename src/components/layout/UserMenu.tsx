@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { EnergyMeter } from "@/components/energy/EnergyMeter";
+import { headerItemClass, isActivePath } from "@/components/layout/headerItem";
 import { TokenBadge } from "@/components/tokens/TokenBadge";
 import { Button } from "@/components/ui/Button";
 import { signOutAction } from "@/lib/auth/actions";
@@ -34,7 +35,17 @@ type State =
   | { status: "signedOut" }
   | { status: "signedIn"; username: string };
 
-export function UserMenu({ onNavigate }: { onNavigate?: () => void }) {
+export function UserMenu({
+  onNavigate,
+  showMeters = true,
+}: {
+  onNavigate?: () => void;
+  /**
+   * Pinta energía y tokens junto al nombre. En móvil van fijos en la barra
+   * (siempre a mano) y el menú desplegable los omite para no repetirlos.
+   */
+  showMeters?: boolean;
+}) {
   const [state, setState] = useState<State>(
     // Sin Supabase configurado no hay sesión posible: se muestran los enlaces
     // de siempre en vez de quedarse cargando para siempre.
@@ -42,6 +53,7 @@ export function UserMenu({ onNavigate }: { onNavigate?: () => void }) {
   );
   const [signingOut, setSigningOut] = useState(false);
   const pathname = usePathname();
+  const accountActive = isActivePath(pathname, routes.account);
 
   const sync = useCallback(async (user: User | null) => {
     if (!user) {
@@ -110,14 +122,20 @@ export function UserMenu({ onNavigate }: { onNavigate?: () => void }) {
       <div className="flex items-center gap-1.5">
         {/* El medidor y el saldo se pintan solos si hay algo que mostrar:
             cada uno resuelve su propio estado y devuelve null sin sesión. */}
-        <EnergyMeter />
-        <TokenBadge />
+        {showMeters && (
+          <>
+            <EnergyMeter />
+            <TokenBadge />
+          </>
+        )}
 
         <Link
-          href={routes.courses}
+          href={routes.account}
           onClick={onNavigate}
-          title={`Sesión iniciada como ${state.username}`}
-          className="focus-ring flex items-center gap-2 rounded-control px-2.5 py-2 text-sm text-slate-200 transition-colors hover:bg-white/5 hover:text-white"
+          aria-label={`Tu cuenta: ${state.username}`}
+          aria-current={accountActive ? "page" : undefined}
+          title={`Tu cuenta · sesión iniciada como ${state.username}`}
+          className={headerItemClass(accountActive, "flex gap-2 text-sm text-slate-200")}
         >
           <span
             aria-hidden
@@ -125,14 +143,19 @@ export function UserMenu({ onNavigate }: { onNavigate?: () => void }) {
           >
             {state.username.slice(0, 1)}
           </span>
-          <span className="max-w-32 truncate font-medium">{state.username}</span>
+          {/* Entre 1024 y 1279 px la barra va justa: queda el avatar (con su etiqueta
+              accesible) y el nombre vuelve cuando hay sitio. En el menú móvil, que va
+              en vertical, siempre se ve. */}
+          <span className={`max-w-32 truncate font-medium ${onNavigate ? "" : "hidden xl:inline"}`}>
+            {state.username}
+          </span>
         </Link>
 
         <button
           type="button"
           onClick={handleSignOut}
           disabled={signingOut}
-          className="focus-ring inline-flex h-9 items-center gap-1.5 rounded-control border border-white/15 px-3 text-sm text-slate-200 transition-colors hover:border-white/30 hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="focus-ring inline-flex h-9 items-center gap-1.5 rounded-control border border-white/15 px-3 text-sm whitespace-nowrap text-slate-200 transition-colors hover:border-white/30 hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           <LogOut aria-hidden className="size-3.5" />
           {signingOut ? "Cerrando…" : "Cerrar sesión"}

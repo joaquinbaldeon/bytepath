@@ -100,6 +100,7 @@ export default async function LessonPage({ params }: PageProps<"/cursos/[curso]/
                 moduleIndex={moduleIndex}
                 position={position}
                 total={stats.lessonCount}
+                courseTitle={course.title}
                 courseSlug={course.slug}
                 coursePath={path}
                 previous={previous}

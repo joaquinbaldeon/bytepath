@@ -64,17 +64,17 @@ export function QuizModal({
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
-      className="bp-modal m-auto w-[calc(100%-1.5rem)] max-w-xl overflow-hidden rounded-panel border border-line bg-surface p-0 text-fg shadow-card"
+      className="bp-modal m-auto w-[calc(100%-1.5rem)] max-w-[46rem] overflow-hidden rounded-panel border border-line bg-surface p-0 text-fg shadow-card"
     >
       {open && (
-        <div className="bp-modal-body flex max-h-[min(90dvh,44rem)] flex-col">
-          <header className="flex shrink-0 items-center gap-3 border-b border-line px-5 py-3 sm:px-6">
-            <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-control bg-learn-soft">
-              <ListChecks className="size-4 text-learn-ink" />
+        <div className="bp-modal-body flex max-h-[min(92dvh,54rem)] flex-col">
+          <header className="flex shrink-0 items-center gap-3.5 border-b border-line px-5 py-3.5 sm:gap-4 sm:px-8 sm:py-5">
+            <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-control bg-learn-soft sm:size-10">
+              <ListChecks className="size-4.5 text-learn-ink sm:size-5" />
             </span>
             <div className="min-w-0 flex-1">
               <p className="font-mono text-label tracking-wider text-fg-subtle uppercase">Quiz</p>
-              <h2 id="quiz-modal-title" className="truncate text-sm font-semibold">
+              <h2 id="quiz-modal-title" className="truncate font-display text-base font-semibold sm:text-lg">
                 {title}
               </h2>
             </div>
@@ -82,7 +82,7 @@ export function QuizModal({
               type="button"
               onClick={onClose}
               aria-label="Salir del quiz"
-              className="focus-ring grid size-9 shrink-0 place-items-center rounded-control text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+              className="focus-ring grid size-10 shrink-0 place-items-center rounded-control text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
             >
               <X aria-hidden className="size-4.5" />
             </button>
