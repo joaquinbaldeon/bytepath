@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, pruebas y build (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # Sin variables de entorno a propósito: el build debe funcionar sin
+      # Supabase ni Judge0 (BytePath arranca sin cuentas ni ejecución).
+      - name: Build
+        run: npm run build
+
+      # Después del build: una de las pruebas revisa que .next/static no
+      # contenga respuestas ni soluciones (sin build, se omite).
+      - name: Pruebas
+        run: npm test

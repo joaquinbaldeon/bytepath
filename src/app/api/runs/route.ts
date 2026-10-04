@@ -6,6 +6,7 @@ import { readCourseProgress } from "@/lib/courses/server";
 import type { Course, Lesson } from "@/lib/courses/types";
 import { compareOutputs } from "@/lib/courses/outputDiff";
 import { callWriter, ensureStarted, resolveWriter } from "@/lib/courses/writer";
+import { alertCrossed, describeWait, parseDailyRunLimit } from "@/lib/execution/budget";
 import { isJudge0Configured, Judge0Error, runOnJudge0 } from "@/lib/execution/judge0";
 import type {
   RunStatus,
@@ -13,6 +14,7 @@ import type {
   TestOutcome,
   TestStatus,
 } from "@/lib/execution/types";
+import { consumeJudge0Budget } from "@/lib/security/rateLimit";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { describeSupabaseError, logSupabaseFailure } from "@/lib/supabase/errors";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -179,6 +181,41 @@ async function consumeRunQuota(): Promise<Response | null> {
 }
 
 /**
+ * Tope global diario de ejecuciones (`JUDGE0_DAILY_RUN_LIMIT`, ver
+ * `execution/budget.ts`): el freno de costes cuando Judge0 se paga por uso.
+ * Sin la variable no hay tope. Al cruzar el 50 %, el 80 % y el 100 % deja una
+ * línea en los registros del servidor (sin datos de nadie) para que se note a
+ * tiempo; al llegar al 100 % deja de ejecutar hasta que se renueva la ventana
+ * y lo dice claro, en vez de fallar. Si no se puede comprobar, deja pasar.
+ */
+async function consumeDailyBudget(): Promise<Response | null> {
+  const limit = parseDailyRunLimit(process.env.JUDGE0_DAILY_RUN_LIMIT);
+  if (limit === null) return null;
+
+  const result = await consumeJudge0Budget(limit);
+  if (result.status === "unavailable") return null;
+
+  if (result.status === "limited") {
+    const wait = Math.max(1, result.retryAfter);
+    return json(
+      {
+        status: "unavailable",
+        message: `BytePath ha alcanzado hoy su límite de ejecuciones de código. Se renueva en ${describeWait(wait)}; mientras tanto puedes seguir con la teoría y los quizzes.`,
+        tests: [],
+      },
+      429,
+      { "Retry-After": String(wait) },
+    );
+  }
+
+  const percent = alertCrossed(result.used, limit);
+  if (percent !== null) {
+    console.warn(`[runs] tope diario de ejecuciones al ${percent} % (${result.used} de ${limit})`);
+  }
+  return null;
+}
+
+/**
  * Deja constancia de que el desafío está resuelto.
  *
  * Solo lo llama el servidor, y solo con un veredicto "passed" que ÉL mismo ha
@@ -275,6 +312,10 @@ export async function POST(request: Request) {
     const quotaDenied = await consumeRunQuota();
     if (quotaDenied) return quotaDenied;
   }
+
+  // 4b. Tope global del sitio: es lo que acota el gasto en Judge0.
+  const budgetDenied = await consumeDailyBudget();
+  if (budgetDenied) return budgetDenied;
 
   // 5. Judge0. Solo recibe el código, las entradas de prueba, el lenguaje y los
   // límites: ni usuario, ni correo, ni curso, ni lección (ver judge0.ts).

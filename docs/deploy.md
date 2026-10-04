@@ -1,7 +1,8 @@
 # BytePath · guía de despliegue en producción (Vercel + Supabase)
 
-> Guía técnica interna. Nada de esto se ha ejecutado contra el proyecto real: es
-> la lista para que quien despliega lo haga de forma controlada. Etiquetas:
+> Para quien despliega su propia instancia de BytePath. Para trabajar en local
+> basta con [`SETUP.md`](SETUP.md). Los nombres del panel de Supabase y de
+> Vercel pueden cambiar entre versiones. Etiquetas:
 > **[SQL]** SQL Editor de Supabase · **[SUPABASE DASHBOARD]** panel de Supabase ·
 > **[VERCEL ENV]** variables del proyecto en Vercel · **[CODE]** ya está en el código.
 
@@ -16,9 +17,9 @@
    («desactivada (transición)»).
 5. **[SUPABASE DASHBOARD]** Toda la sección 3 de esta guía (URLs, SMTP, correo…).
 6. **[VERCEL ENV]** Variables de la sección 4, en el entorno *Production*.
-7. **[SQL]** `supabase/migrations/0003_publish_terms_1_1.sql` — **justo antes** del
-   despliegue (el código nuevo envía la versión 1.1; si llegara antes que esta
-   fila, las altas no guardarían la aceptación).
+7. **[SQL]** `supabase/migrations/0003_publish_terms_1_1.sql` — **antes** de
+   desplegar: el código envía la versión 1.1 de los Términos y, sin esta fila,
+   las altas no guardarían la aceptación.
 8. **[VERCEL]** Desplegar. `NEXT_PUBLIC_*` se incrustan al compilar: si cambian,
    hay que volver a desplegar.
 9. Comprobar en producción, con las exigencias todavía desactivadas:
@@ -37,15 +38,15 @@
 Vuelta atrás de 10: `update public.legal_config set require_terms_on_signup = false where id;`
 y `update public.auth_guard_config set enforce = false where id;`.
 
-## 2. Qué protege cada pieza nueva
+## 2. Qué protege cada pieza
 
-- **Alta** (P-M1): el servidor valida 14+ y Términos, pide a la base de datos una
+- **Alta**: el servidor valida 14+ y Términos, pide a la base de datos una
   firma (`issue_signup_proof`, solo `service_role`, secreto generado dentro de la
   base de datos) y la envía en el alta. El trigger `guard_auth_user_insert`
   rechaza toda alta sin firma válida (15 min, ligada al correo) y **borra** la
   firma de los metadatos. Cierra `POST /auth/v1/signup`, OTP que crea usuarios y
   registro anónimo.
-- **Contraseña** (P-M2): tras comprobar la contraseña actual o el enlace de
+- **Contraseña**: tras comprobar la contraseña actual o el enlace de
   recuperación, el servidor emite un permiso de un solo uso y 2 minutos
   (`issue_password_change_ticket`). `guard_auth_user_update` rechaza cualquier
   cambio de `encrypted_password` sin permiso: `PUT /auth/v1/user` con una sesión
@@ -54,21 +55,21 @@ y `update public.auth_guard_config set enforce = false where id;`.
 - **Efecto secundario**: con 0004 activa, crear usuarios o cambiar contraseñas o
   correos **desde el panel de Supabase** también se rechaza. Para una operación
   manual: desactivar `auth_guard_config.enforce`, operar, reactivar.
-- **Username** (P-B5): ya no se puede cambiar desde el navegador (sin política ni
+- **Username**: no se puede cambiar desde el navegador (sin política ni
   privilegio de UPDATE).
-- **Límites** (P-M3/P-B3): 30 respuestas de quiz y 60 acciones de progreso por
+- **Límites**: 30 respuestas de quiz y 60 acciones de progreso por
   minuto y cuenta, sobre la misma tabla `rate_limits`.
 
 ## 3. Supabase: configuración del panel
 
-Los nombres exactos del panel cambian entre versiones; donde dice «buscar», es
-la sección de Authentication correspondiente.
+Los nombres exactos del panel cambian entre versiones; si no encuentras una
+opción, búscala en la sección de Authentication correspondiente.
 
 | # | Dónde | Valor | Por qué / cómo verificar |
 |---|---|---|---|
 | 1 | Authentication → URL Configuration → **Site URL** | `https://<dominio de producción>` | Destino por defecto de los correos. Verificar: un correo de prueba enlaza a ese dominio. |
 | 2 | Authentication → URL Configuration → **Redirect URLs** | `https://<dominio>/auth/confirmar` (y nada de `localhost` en el proyecto de producción) | El código solo pide ese destino. |
-| 3 | Authentication → Emails → **SMTP Settings** | **SMTP propio** (proveedor a elegir) | **Bloqueante.** Según la documentación de Supabase, el servicio por defecto es solo para pruebas, solo envía a miembros del equipo del proyecto y a unos 2 correos por hora: sin SMTP propio, los usuarios no reciben la confirmación. El proveedor elegido es un tercero más que recibe correos: añadirlo a la Política de Privacidad. |
+| 3 | Authentication → Emails → **SMTP Settings** | **SMTP propio** (proveedor a elegir) | **Bloqueante.** Según la documentación de Supabase, el servicio por defecto es solo para pruebas, solo envía a miembros del equipo del proyecto y a unos 2 correos por hora: sin SMTP propio, los usuarios no reciben la confirmación. El proveedor elegido es un tercero más que recibe correos: menciónalo en tu Política de Privacidad. |
 | 4 | Email provider → **Confirm email** | Activado | Sin confirmar el correo no hay sesión. Verificar: el registro muestra «Te hemos enviado un correo». |
 | 5 | Email provider → **Secure email change** | Activado | Defensa adicional: la base de datos ya rechaza cambios de correo. |
 | 6 | Email provider → **Secure password change** | Activado | Pide sesión de menos de 24 h para cambiar la contraseña; el código ya muestra el mensaje «cierra sesión, vuelve a entrar». |
@@ -83,9 +84,9 @@ la sección de Authentication correspondiente.
 | 15 | Authentication → Rate Limits | Revisar | El servidor de BytePath hace el login y el registro: Supabase ve SU IP. Límites de envío de correo según el SMTP. |
 | 16 | Data API → **Exposed schemas** | Solo `public` (y `graphql_public` si aparece) | `auth` y cualquier otro esquema, fuera. |
 | 17 | API Keys → clave secreta / service_role | Solo en Vercel, marcada como sensible | Si alguna vez se expuso, rotarla. |
-| 18 | Database → Backups | Según el plan; anotar la retención real | Necesario para la Política (hoy dice que no está verificada). |
+| 18 | Database → Backups | Según el plan; anotar la retención real | La necesitarás para explicar la conservación de datos en tu Política de Privacidad. |
 | 19 | Advisors (Security) | Sin avisos de RLS | Complementa `verify.sql`. |
-| 20 | Región del proyecto | Anotarla | Pendiente legal: flujo transfronterizo. |
+| 20 | Región del proyecto | Anotarla | Relevante si la normativa de tu país regula las transferencias internacionales de datos. |
 
 ## 4. Vercel: variables de entorno (Production)
 
@@ -118,20 +119,21 @@ curl -s -X POST "$SUPABASE_URL/auth/v1/signup" -H "apikey: $PUBLISHABLE_KEY" -H 
 Debe responder un error («Database error saving new user») y **no** debe aparecer
 la cuenta en Authentication → Users.
 
-## 6. Judge0: decisión pendiente
+## 6. Judge0: elegir proveedor
 
-Hoy `JUDGE0_URL` apunta a `https://ce.judge0.com`, la instancia pública, sin clave.
-Su retención y sus condiciones de uso **no están verificadas**. Lo que el código
-ya admite sin cambios: instancia propia (`JUDGE0_URL` + `JUDGE0_API_KEY` como
-`X-Auth-Token`) o Judge0 en RapidAPI (`JUDGE0_API_KEY` + `JUDGE0_API_HOST`).
+El código admite, sin cambios, tres opciones. Ninguna viene configurada: decide
+según tu presupuesto, el volumen de uso y dónde quieres que se procese el código.
 
-- **A. Mantener la pública**: sin coste ni mantenimiento; sin contrato, sin
-  retención conocida, sin garantía de disponibilidad ni de cupo, y el código de
-  los usuarios va a un tercero cuyas condiciones no se han revisado.
-- **B. Judge0 gestionado (p. ej. RapidAPI)**: cupos y condiciones contractuales
-  conocidas; coste; sigue siendo un tercero.
-- **C. Instancia propia**: control de la retención y de la ubicación de los datos;
-  requiere servidor, mantenimiento y aislamiento (ejecuta código ajeno).
+- **A. Instancia pública (`https://ce.judge0.com`)**: sin coste ni
+  mantenimiento; sin contrato, sin garantía de disponibilidad ni de cupo, y el
+  código de los usuarios va a un tercero cuya retención debes revisar tú.
+- **B. Judge0 gestionado (p. ej. RapidAPI: `JUDGE0_API_KEY` + `JUDGE0_API_HOST`)**:
+  cupos y condiciones contractuales conocidas; tiene coste y sigue siendo un tercero.
+- **C. Instancia propia (`JUDGE0_URL` + `JUDGE0_API_KEY` como `X-Auth-Token`)**:
+  control de la retención y de la ubicación de los datos; requiere servidor,
+  mantenimiento y aislamiento (ejecuta código ajeno). Usa Judge0 1.13.1 o
+  posterior: las versiones anteriores tienen vulnerabilidades que permiten
+  escapar del sandbox.
 
-La elección depende de las condiciones del proveedor, el presupuesto y la
-ubicación de los datos, que no se han verificado aquí.
+Si pagas por uso, `JUDGE0_DAILY_RUN_LIMIT` pone un tope global de ejecuciones
+al día (ver `.env.example`).

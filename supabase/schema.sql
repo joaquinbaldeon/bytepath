@@ -27,7 +27,7 @@ create table if not exists public.profiles (
     check (username ~ '^[A-Za-z0-9_]{3,20}$')
 );
 
--- Unicidad insensible a mayúsculas: "Randms" y "randms" son el mismo nombre.
+-- Unicidad insensible a mayúsculas: "Ana_Dev" y "ana_dev" son el mismo nombre.
 -- Es la garantía real de unicidad, la que resuelve dos registros simultáneos.
 create unique index if not exists profiles_username_lower_key
   on public.profiles (lower(username));

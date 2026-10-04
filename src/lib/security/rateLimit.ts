@@ -30,7 +30,8 @@ import { describeSupabaseError, logSupabaseFailure } from "@/lib/supabase/errors
 export type LimitRule = { bucket: string; limit: number; windowSeconds: number };
 
 export type RateLimitResult =
-  | { status: "allowed" }
+  /** `remaining`: lo que queda en la ventana tras contar esta petición. */
+  | { status: "allowed"; remaining?: number }
   | { status: "limited"; retryAfter: number }
   /** No se ha podido comprobar (sin clave de servicio, o security.sql sin aplicar). */
   | { status: "unavailable" };
@@ -83,7 +84,9 @@ async function consume(rule: LimitRule, subject: string, userId: string | null):
   }
 
   const raw = data as RawResult;
-  return raw.allowed ? { status: "allowed" } : { status: "limited", retryAfter: Math.max(1, raw.retry_after) };
+  return raw.allowed
+    ? { status: "allowed", remaining: raw.remaining }
+    : { status: "limited", retryAfter: Math.max(1, raw.retry_after) };
 }
 
 async function isBlocked(rule: LimitRule, subject: string): Promise<boolean | null> {
@@ -140,6 +143,25 @@ export async function consumeAnonymousLimit(ipRule: LimitRule, globalRule?: Limi
 export async function consumeUserLimit(rule: LimitRule, userId: string): Promise<RateLimitResult> {
   const result = await consume(rule, userId, userId);
   return result.status === "unavailable" ? { status: "allowed" } : result;
+}
+
+/**
+ * Tope GLOBAL de ejecuciones de código en una ventana de 24 h (ver
+ * `execution/budget.ts`). Es un freno de costes, no de seguridad, y por eso, si
+ * no se puede comprobar (sin clave de servicio, o security.sql sin aplicar),
+ * deja pasar: cortar el estudio de todos por un fallo nuestro sería peor, y el
+ * límite por usuario sigue vigente. `used` es la ejecución número N de la ventana.
+ */
+export async function consumeJudge0Budget(
+  limit: number,
+): Promise<{ status: "allowed"; used: number } | { status: "limited"; retryAfter: number } | { status: "unavailable" }> {
+  const result = await consume({ bucket: "judge0:day", limit, windowSeconds: 86400 }, "global", null);
+  if (result.status === "allowed") {
+    return typeof result.remaining === "number"
+      ? { status: "allowed", used: limit - result.remaining }
+      : { status: "unavailable" };
+  }
+  return result;
 }
 
 /**

@@ -22,7 +22,23 @@
 
 # misc
 .DS_Store
+Thumbs.db
 *.pem
+*.key
+*.p12
+*.pfx
+
+# editores e IDEs (configuración personal)
+.idea/
+.vscode/*
+!.vscode/extensions.json
+# Configuración local de Claude Code (permisos y servidor de vista previa)
+.claude/settings.local.json
+.claude/launch.json
+
+# Supabase CLI (estado local, si alguien la usa)
+supabase/.temp/
+supabase/.branches/
 
 # debug
 npm-debug.log*

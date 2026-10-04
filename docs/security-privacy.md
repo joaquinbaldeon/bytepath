@@ -1,9 +1,9 @@
-# BytePath · seguridad y privacidad (documentación interna)
+# BytePath · seguridad y privacidad
 
-> Documento técnico para el equipo. No es una Política de Privacidad ni asesoría
-> jurídica. Describe lo que hace el **código** de este repositorio; lo que
-> depende de la configuración de producción está marcado como **NO DETERMINADO**
-> o **DECISIÓN PENDIENTE**. No contiene secretos.
+> Documento técnico. No es una Política de Privacidad ni asesoría jurídica.
+> Describe lo que hace el **código** de este repositorio. Lo que depende de cómo
+> se despliegue cada instancia (proveedor, plan, región, hosting) está marcado
+> como **depende de la instalación**.
 
 Principios: recopilar solo lo necesario para prestar el servicio, no vender
 datos, no perfilar, sin analítica ni publicidad de terceros, proveedores externos
@@ -17,14 +17,14 @@ solo cuando hacen falta.
 |---|---|---|---|---|
 | Correo | Registro | `auth.users` (Supabase Auth) | Sí (identificar la cuenta, confirmar, recuperar) | Hasta eliminar la cuenta |
 | Contraseña | Registro / cambio | Hash en `auth.users` (Supabase). Pasa por el servidor de BytePath en tránsito (TLS) y no se guarda ni se registra | Sí | Hasta eliminar la cuenta |
-| Nombre de usuario | Registro | `profiles.username` (**fuente de verdad**). También queda en `auth.users.raw_user_meta_data` (ver §9) | Sí | Hasta eliminar la cuenta |
+| Nombre de usuario | Registro | `profiles.username` (**fuente de verdad**). También queda en `auth.users.raw_user_meta_data` (ver §8) | Sí | Hasta eliminar la cuenta |
 | Aceptación de Términos | Registro / `/cuenta` | `legal_acceptances` (usuario, tipo, versión, fecha) | Sí | Hasta eliminar la cuenta |
 | Progreso | Uso | `lesson_activations` | Sí | Hasta eliminar la cuenta |
 | Instantánea del quiz en curso | Uso | `lesson_activations.quiz_state` (≤ 4 KB) | Sí, mientras dura el quiz | Se borra al completar la lección |
 | Energía, saldo e historial de tokens | Uso | `user_energy`, `user_tokens`, `token_transactions` | Sí | Hasta eliminar la cuenta |
 | Suscripción (solo manual) | Administración | `subscriptions` | Solo si se usa Premium | Hasta eliminar la cuenta |
 | Contadores de límite | Uso | `rate_limits`: `bucket`, `subject` (id de usuario, HMAC de la IP o `global`), `window_start`, `hits` | Sí (evitar abusos) | Sin historial. Una fila caducada (> 2 días) se borra en una llamada posterior al limitador (hasta 20 por llamada); sin actividad, permanece. No hay plazo exacto |
-| Código de los desafíos | Uso | **No se guarda** en BytePath; se envía a Judge0 | Sí (en tránsito) | Judge0: NO DETERMINADO |
+| Código de los desafíos | Uso | **No se guarda** en BytePath; se envía a Judge0 | Sí (en tránsito) | Judge0: depende de la instalación |
 | Opción marcada en el quiz | Uso | **No se guarda**; solo se corrige | — | — |
 | Sesión | Login | Cookies `sb-<ref>-auth-token*` (ver §5) | Sí | 30 días sin uso |
 | Tema claro/oscuro | Navegador | `localStorage["bytepath-theme"]` | Preferencia | Indefinida (en el navegador) |
@@ -52,9 +52,9 @@ Cadena: navegador → `POST /api/runs` (mismo dominio) → servidor → Judge0 �
   libre y **podría incluir lo que el usuario escriba en él** (nombres,
   comentarios, credenciales pegadas por error).
 - **Retención**: Judge0 guarda cada envío asociado a un token (así funciona la
-  consulta que hace BytePath). Cuánto lo conserva el proveedor configurado es
-  **NO DETERMINADO**. En `.env.local` el proveedor es la instancia pública
-  `ce.judge0.com`; en producción, NO DETERMINADO.
+  consulta que hace BytePath). Cuánto lo conserva depende del proveedor
+  configurado (instancia pública, servicio gestionado o instancia propia; ver
+  `docs/deploy.md` §6).
 - **Protecciones** (en este orden, y nada llega a Judge0 si falla una): sesión
   (401, antes de leer el cuerpo) → tamaño y forma del cuerpo → el desafío existe
   (404) → el curso y la lección enviados son los del desafío según el contenido
@@ -70,13 +70,14 @@ Cadena: navegador → `POST /api/runs` (mismo dominio) → servidor → Judge0 �
 
 | Tercero | Qué hace | Qué recibe | Retención conocida |
 |---|---|---|---|
-| Supabase | Auth y base de datos | Correo, hash de contraseña, metadatos, todos los datos de §1; IP y user-agent de las peticiones (el navegador habla con Supabase para renovar la sesión y leer su perfil) | NO DETERMINADO (logs, auditoría de Auth, backups según plan) |
-| Judge0 | Ejecutar código | §3 | NO DETERMINADO |
-| Hosting de la app | Servir BytePath | Todo el tráfico: IP, user-agent, cookies, cuerpos (incl. contraseña en tránsito), código enviado a `/api/runs`, logs | **HOSTING NO DETERMINADO** |
-| Emisor de correo de Supabase | Correos de confirmación y recuperación | Correo del usuario | NO DETERMINADO (SMTP de Supabase o propio) |
+| Supabase | Auth y base de datos | Correo, hash de contraseña, metadatos, todos los datos de §1; IP y user-agent de las peticiones (el navegador habla con Supabase para renovar la sesión y leer su perfil) | Depende de la instalación (logs, auditoría de Auth, backups según plan) |
+| Judge0 | Ejecutar código | §3 | Depende del proveedor |
+| Hosting de la app | Servir BytePath | Todo el tráfico: IP, user-agent, cookies, cuerpos (incl. contraseña en tránsito), código enviado a `/api/runs`, logs | Depende del hosting |
+| Emisor de correo de Supabase | Correos de confirmación y recuperación | Correo del usuario | Depende de la instalación (SMTP de Supabase o propio) |
 
-No hay más proveedores. Stripe / Mercado Pago aparecen solo en comentarios
-(**planeado/mencionado, NO ACTIVO**). Las fuentes se sirven desde el propio
+No hay más proveedores. No hay ninguna pasarela de pago integrada: si un
+comentario del código menciona una (Stripe, Mercado Pago), es un plan futuro, no
+una integración. Las fuentes se sirven desde el propio
 dominio (`next/font`), sin peticiones a Google desde el navegador.
 
 ## 5. Mecanismos de seguridad
@@ -89,7 +90,7 @@ dominio (`next/font`), sin peticiones a Google desde el navegador.
   `X-Forwarded-Proto`) para decidirlo. En el navegador se usa el protocolo real
   de la página. `localhost` y `127.0.0.1` aceptan cookies Secure por http.
 - `SameSite=Lax`, `path=/`, sin dominio (solo el host).
-- Duración **30 días** sin uso (antes 400). `@supabase/ssr` ignora `maxAge`, así
+- Duración **30 días** sin uso. `@supabase/ssr` ignora `maxAge`, así
   que se aplica en nuestras funciones `setAll` (servidor, proxy y navegador).
 - **No HttpOnly**, a propósito: el cliente de Supabase del navegador lee y
   renueva la sesión (barra, cierre de sesión, `onAuthStateChange`). La cookie
@@ -122,7 +123,7 @@ sin `X-Powered-By`. `script-src` y `style-src` llevan `'unsafe-inline'`
 Cada tabla con datos de usuario tiene **dos cerraduras**: RLS (solo lectura de
 las filas propias, `auth.uid() = user_id`) y privilegios de tabla (anon nada;
 authenticated solo `SELECT`). Ninguna política permite `INSERT`/`UPDATE`/`DELETE`:
-el username tampoco se cambia desde el navegador (P-B5, sin interfaz).
+el username tampoco se cambia desde el navegador (no hay interfaz para ello).
 Toda escritura pasa por funciones `SECURITY DEFINER` con `search_path = ''`.
 
 | Función | Quién la ejecuta | Usuario | Escribe en |
@@ -177,7 +178,7 @@ intentos; no se cruza con la cuenta ni se guarda la IP en claro.
 **Dependencia de Supabase Auth**: el inicio de sesión, el registro y la
 recuperación los hace el servidor de BytePath, así que Supabase ve la IP del
 servidor. Sus límites por IP (panel: Auth > Rate Limits) pueden terminar
-contando a todos los usuarios juntos. Revisarlos antes de producción.
+contando a todos los usuarios juntos. Revísalos antes de abrir el registro.
 
 **Enumeración de usernames (residual)**: el formulario de BytePath no dice si
 un username existe fuera de la comprobación limitada. Pero quien llame
@@ -205,14 +206,14 @@ cookies, código de usuario ni cuerpos de respuesta de Judge0.
 
 ## 6. Gestión de la cuenta
 
-| Función | SQL | Backend | Frontend | Probado |
+| Función | SQL | Backend | Frontend | Cómo se prueba |
 |---|---|---|---|---|
-| Recuperar contraseña | Supabase Auth | `requestPasswordResetAction` (respuesta idéntica exista o no la cuenta) | `/recuperar` → enlace → `/cuenta/contrasena` | Localmente (pasarela) |
-| Cambiar contraseña | Supabase Auth | `updatePasswordAction` (pide la actual salvo acceso por enlace en los últimos 15 min) | `/cuenta/contrasena` | Localmente |
-| Eliminar cuenta | Cascada en todas las tablas | `deleteAccountAction` (contraseña + "ELIMINAR", `auth.admin.deleteUser`, verificación de filas) | `/cuenta` | Localmente |
-| Descargar mis datos | RLS | `GET /api/cuenta/exportar` (JSON, con la sesión del usuario) | `/cuenta` | Localmente |
-| Aceptar Términos vigentes | `accept_legal_document` | `acceptCurrentTermsAction` | `/cuenta` (si no consta) | SQL |
-| Cambiar username | Bloqueado (sin política ni privilegio) | — | — (sin interfaz; por correo) | SQL |
+| Recuperar contraseña | Supabase Auth | `requestPasswordResetAction` (respuesta idéntica exista o no la cuenta) | `/recuperar` → enlace → `/cuenta/contrasena` | A mano, en local |
+| Cambiar contraseña | Supabase Auth | `updatePasswordAction` (pide la actual salvo acceso por enlace en los últimos 15 min) | `/cuenta/contrasena` | A mano, en local |
+| Eliminar cuenta | Cascada en todas las tablas | `deleteAccountAction` (contraseña + "ELIMINAR", `auth.admin.deleteUser`, verificación de filas) | `/cuenta` | A mano, en local; `security-tests.sql` (sin filas huérfanas) |
+| Descargar mis datos | RLS | `GET /api/cuenta/exportar` (JSON, con la sesión del usuario) | `/cuenta` | A mano, en local |
+| Aceptar Términos vigentes | `accept_legal_document` | `acceptCurrentTermsAction` | `/cuenta` (si no consta) | `legal-tests.sql` |
+| Cambiar username | Bloqueado (sin política ni privilegio) | — | — (sin interfaz; se pide por correo al contacto de la instancia) | `security-tests.sql` |
 | Borrar o reiniciar todo el progreso | — | — | — | No existe (solo reiniciar un quiz en curso) |
 
 **Qué NO borra la eliminación**: copias de seguridad de Supabase, logs de
@@ -223,44 +224,43 @@ posterior en el limitador (sin plazo exacto).
 
 ## 7. Despliegue y configuración necesaria
 
-Orden **expandir → desplegar → verificar → contraer** (probado localmente con
-esquema viejo + código viejo, esquema nuevo + código viejo y esquema nuevo +
-código nuevo):
+El paso a paso completo está en [`docs/deploy.md`](deploy.md). La idea es
+**expandir → desplegar → verificar → contraer**, para no romper nada entre una
+versión del esquema y otra:
 
 1. **Expandir** (SQL Editor): `schema.sql` (si no estaba) → `setup.sql` →
-   `verify.sql` (todo OK). Es aditivo e idempotente y **compatible con el código
-   anterior**: el registro sin `terms_version` sigue funcionando porque
+   `verify.sql` (todo OK). Es aditivo, idempotente y compatible con el código
+   anterior: el registro sin `terms_version` sigue funcionando porque
    `legal_config.require_terms_on_signup` empieza en `false`.
-2. **Desplegar** el código. Variables de servidor (no `NEXT_PUBLIC_`):
+2. **Desplegar** el código. Variables de servidor (nunca con prefijo `NEXT_PUBLIC_`):
    - `SUPABASE_SERVICE_ROLE_KEY`: progreso, límites anónimos y de fallos,
      eliminación de cuenta, comprobación de username. **Solo servidor**: la
-     leen módulos `server-only`; nunca con prefijo `NEXT_PUBLIC_`.
-     Las ejecuciones de `/api/runs` ya no la necesitan.
+     leen módulos `server-only`. Las ejecuciones de `/api/runs` no la necesitan.
    - `SITE_URL=https://<dominio>` (correos, redirecciones, cookies Secure).
    - `TRUSTED_IP_HEADER` / `TRUSTED_PROXY_COUNT` solo si se cumple el aviso de §5.
    - `JUDGE0_URL` (+ `JUDGE0_API_KEY` / `JUDGE0_API_HOST` si el proveedor lo exige).
-   Si el código nuevo llega antes que el SQL, `/api/runs` responde 503 (no puede
+
+   Si el código llega antes que el SQL, `/api/runs` responde 503 (no puede
    comprobar el cupo) y el registro funciona sin guardar la aceptación.
 3. **Verificar**: un registro de prueba deja su fila en `legal_acceptances`; una
    ejecución de prueba funciona; `verify.sql` sigue en OK.
 4. **Contraer**: `supabase/migrations/0002_require_terms_on_signup.sql` (a partir
-   de aquí un alta sin la versión vigente se rechaza).
-3. En el panel de Supabase (**DECISIÓN / configuración, no verificable desde el
-   código**): Site URL y Redirect URLs deben incluir
-   `https://<dominio>/auth/confirmar**` (confirmación y recuperación); plantillas
-   de correo (con PKCE, el enlace de recuperación funciona en el mismo
-   navegador; para que funcione en otro, usar la plantilla con `token_hash`);
-   "Secure password change"; duración del JWT y de las sesiones; límites de Auth.
+   de aquí un alta sin la versión vigente se rechaza) y, si quieres que solo el
+   servidor pueda crear cuentas y cambiar contraseñas, `0004_enforce_server_side_auth.sql`.
 
-## 8. Qué queda pendiente
+En el panel de Supabase (configuración que el código no puede comprobar): Site
+URL y Redirect URLs deben incluir `https://<dominio>/auth/confirmar`
+(confirmación y recuperación); plantillas de correo (con PKCE, el enlace de
+recuperación funciona en el mismo navegador; para que funcione en otro, usar la
+plantilla con `token_hash`); "Secure password change"; duración del JWT y de las
+sesiones; límites de Auth.
 
-- Seguir §7 en el proyecto real. Hasta aplicar `setup.sql`, la aceptación de
-  Términos **no** se guarda en ninguna tabla (el servidor lo avisa en el log al
-  registrarse alguien), y hasta aplicar `0002` no se exige.
-- Configurar `SUPABASE_SERVICE_ROLE_KEY` (no está en `.env.local`) y `SITE_URL`.
-- Identificar hosting, región de Supabase, SMTP y proveedor/plan de Judge0, y
-  qué cabecera de IP escribe el hosting (para decidir `TRUSTED_IP_HEADER`).
-- Cookie HttpOnly (**no implementada**). Hoy leen la sesión desde JavaScript:
+## 8. Limitaciones conocidas y mejoras posibles
+
+Lo que el código todavía no hace. Son buenos puntos de partida si quieres
+contribuir; abre un issue antes de empezar.
+
+- **Cookie HttpOnly (no implementada).** Hoy leen la sesión desde JavaScript:
   `src/components/layout/UserMenu.tsx` (`onAuthStateChange` y `signOut()` en el
   navegador), `src/lib/energy/store.ts` (`onAuthStateChange` para
   resincronizarse), `LoginForm.tsx` y `RegisterForm.tsx` (`getSession` tras la
@@ -269,30 +269,38 @@ código nuevo):
   vía route handlers), que el cierre de sesión sea solo la Server Action, que la
   renovación la haga `proxy.ts`, y entonces `httpOnly: true` en
   `hardenAuthCookie`.
-- CSP sin `'unsafe-inline'`: nonces (obliga a render dinámico de todas las
+- **CSP sin `'unsafe-inline'`**: nonces (obliga a render dinámico de todas las
   páginas) o SRI (experimental en Next 16).
-- Metadatos: `raw_user_meta_data` conserva `username` y `terms_version` del
-  alta (también viajan en el JWT). El código ya no los lee. Limpiarlos requiere
-  verificar primero que Supabase Auth no los reescribe; procedimiento manual
-  sugerido tras verificarlo:
+- **Metadatos del alta**: `raw_user_meta_data` conserva `username` y
+  `terms_version` (también viajan en el JWT). El código ya no los lee. Limpiarlos
+  requiere verificar primero que Supabase Auth no los reescribe; procedimiento
+  manual sugerido tras verificarlo:
   `update auth.users set raw_user_meta_data = raw_user_meta_data - 'terms_version';`
-- `activated_on` repite información de `activated_at` (candidato a retirar).
-- Política de retención para cuentas inactivas e historial de tokens.
+- **`activated_on`** repite información de `activated_at` (candidato a retirar).
+- **Retención**: no hay una política automática para cuentas inactivas ni para
+  el historial de tokens.
 
-## 9. Qué NO debemos afirmar públicamente todavía
+## 9. Lo que este código no garantiza
 
-- Que la aceptación queda registrada, **hasta aplicar `legal.sql` en producción**.
-- La región o el país donde se almacenan los datos.
-- Cuál es el hosting, o que "no registramos tu IP" (el hosting y Supabase sí la procesan).
-- Que Judge0 no conserva el código o lo borra en un plazo concreto.
-- Que la eliminación es total e inmediata en todos los sistemas (backups, logs, Judge0).
-- Plazos de conservación concretos.
-- Que las cookies son HttpOnly.
-- Cumplimiento de ninguna ley concreta (REQUIERE REVISIÓN LEGAL).
-- Que se verifica la edad o que no hay menores.
-- Cualquier funcionalidad de pago, publicidad o Premium de pago como activa.
+Para no prometer de más, ni en la documentación ni en los textos legales de una
+instancia:
 
-## 10. Documentos legales publicados y revisión legal pendiente
+- La aceptación de los Términos solo queda registrada si `setup.sql` (que
+  incluye `legal.sql`) está aplicado en la base de datos.
+- La región donde se guardan los datos, el hosting y los plazos de conservación
+  dependen de cada instalación, no del código.
+- El hosting y Supabase sí procesan la IP de quien visita la web, aunque
+  BytePath no la guarde en claro.
+- Lo que Judge0 conserva del código depende del proveedor.
+- Eliminar la cuenta no alcanza las copias de seguridad, los logs ni lo ya
+  enviado a Judge0 (ver §6).
+- Las cookies de sesión no son HttpOnly (ver §8).
+- BytePath no verifica la edad: el registro pide confirmar que se tienen 14 años
+  o más.
+- No hay pagos, publicidad ni Premium de pago activos.
+- Este documento no afirma el cumplimiento de ninguna ley concreta.
+
+## 10. Documentos legales
 
 Versiones en el código (`src/lib/legal/documents.ts`): **Términos 1.1** y **Política
 de Privacidad 1.0**, ambas con fecha 2026-09-27. Textos: `src/content/legal/terms.tsx`
@@ -302,30 +310,23 @@ inventadas, promesas de anonimización o de borrado inmediato y plazos que el c�
 no respalda.
 
 **Antes de desplegar los Términos 1.1** hay que registrar la versión en la base de
-datos con `supabase/migrations/0003_publish_terms_1_1.sql` (no está hecho;
-`setup.sql` solo siembra la 1.0). El orden completo del despliegue está en
-`docs/deploy.md`.
+datos con `supabase/migrations/0003_publish_terms_1_1.sql` (`setup.sql` solo
+siembra la 1.0). El orden completo del despliegue está en `docs/deploy.md`.
 
 Si el código con `TERMS_VERSION = "1.1"` llega antes que esa fila: sin la migración
 `0002`, los registros funcionan pero no guardan la aceptación; con `0002` aplicada,
 el registro se rechaza; y aceptar los Términos desde `/cuenta` falla
 (`not_current_version`). La Política de Privacidad no se acepta y no necesita fila.
 
-**PENDIENTE DE REVISIÓN LEGAL** (no resuelto en los documentos, que evitan afirmarlo):
+**Si despliegas tu propia instancia**, los textos de `src/content/legal/` describen
+el BytePath del proyecto y no son asesoría jurídica: adáptalos a tu caso antes de
+abrir el registro. Algunos puntos que suelen requerir revisión profesional, según
+la normativa de cada país (en Perú, la Ley 29733 y su Reglamento):
 
-- Quién debe figurar formalmente como responsable del tratamiento (art. 6.1 del
-  Reglamento pide identidad y domicilio o dirección): BytePath no es persona
-  jurídica y los documentos no nombran a ninguna persona.
-- Base jurídica de cada tratamiento (consentimiento o ejecución de la relación con
-  el usuario, art. 14 de la Ley 29733), en especial para usuarios de 14 a 17 años.
-- Alcance de la regla de edad: «mayores de catorce» (arts. 22 y 25 del Reglamento)
-  frente a la casilla «14 años o más»; si la casilla basta como «esfuerzos
-  razonables» (art. 25.4); capacidad contractual de menores (Código Civil).
-- Inscripción del banco de datos en el Registro Nacional de Protección de Datos
-  Personales y demás obligaciones formales.
-- Flujo transfronterizo (art. 15 de la Ley): Supabase, Judge0 (ce.judge0.com) y el
-  hosting pueden tratar datos fuera del Perú; región y condiciones no verificadas.
-- Proveedor de hosting: no está determinado en el repositorio; la Política lo
-  describe de forma genérica.
-- Cláusula de limitación de responsabilidad (§18 de los Términos) frente a la
-  normativa de protección al consumidor.
+- quién figura como responsable del tratamiento de los datos;
+- la base jurídica de cada tratamiento, en especial para usuarios menores de edad;
+- la edad mínima y cómo se comprueba;
+- el registro de los bancos de datos ante la autoridad, si corresponde;
+- las transferencias internacionales (Supabase, Judge0 y el hosting pueden tratar
+  datos fuera del país);
+- la cláusula de limitación de responsabilidad frente a la protección al consumidor.
