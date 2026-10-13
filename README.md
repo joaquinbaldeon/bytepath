@@ -141,7 +141,13 @@ docs/               guía de setup, despliegue y seguridad
 
 ## Estado y roadmap
 
-BytePath sigue en desarrollo y la dirección puede cambiar. Estas son ideas en las que queremos trabajar, sin fechas comprometidas:
+BytePath entra en un período de pausa (hiatus). El proyecto nació con la idea de enseñar programación desde sus fundamentos hasta la primera olimpiada, haciendo la programación competitiva más accesible para quienes empiezan desde cero.
+
+Aunque el desarrollo activo queda pausado por ahora, el repositorio permanece público y abierto a la comunidad.
+
+#Ideas para el futuro
+
+Estas eran algunas de las direcciones que teníamos en mente para BytePath, sin fechas ni compromisos de implementación:
 
 - [ ] Completar las lecciones de *Introducción a la Programación Competitiva*.
 - [ ] Banco de problemas propio (sección *Problemas*).
@@ -149,7 +155,7 @@ BytePath sigue en desarrollo y la dirección puede cambiar. Estas son ideas en l
 - [ ] Herramientas para docentes: clases y progreso de los alumnos.
 - [ ] Más pruebas automáticas.
 
-Si quieres ayudar en algo de esto, abre un issue para conversarlo antes de empezar.
+Estas ideas representan la visión original del proyecto, no un roadmap activo. No hay una fecha prevista para retomar el desarrollo.
 
 ## Licencia
 
