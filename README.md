@@ -145,7 +145,7 @@ BytePath entra en un período de pausa (hiatus). El proyecto nació con la idea 
 
 Aunque el desarrollo activo queda pausado por ahora, el repositorio permanece público y abierto a la comunidad.
 
-#Ideas para el futuro
+## Ideas para el futuro
 
 Estas eran algunas de las direcciones que teníamos en mente para BytePath, sin fechas ni compromisos de implementación:
 
